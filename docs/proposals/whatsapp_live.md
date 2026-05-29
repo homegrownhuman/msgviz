@@ -1,6 +1,10 @@
 # Proposal: `whatsapp_live` adapter + adapter drift detection
 
-**Status:** Draft · proposal awaiting implementation
+**Status:** ✅ Implemented (msgviz main) — this doc is kept as the
+design rationale. WhatsApp-live + the cross-cutting drift detection
+shipped across the adapters, the `import whatsapp-live` and `drift`
+CLI commands, the `/api/drift` endpoint + UI banner, and a
+reference-counted DB+disk purge as the removal safety net.
 **Target:** msgviz v0.2
 **Scope:**
   - macOS only for WhatsApp (Linux/Windows discussion at the end)

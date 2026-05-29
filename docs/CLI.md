@@ -32,6 +32,7 @@ msgviz --install-completion            # shell completion for your shell
 | [`msgviz init`](#msgviz-init) | Create DB + config |
 | [`msgviz status`](#msgviz-status) | DB stats, paths, health |
 | [`msgviz check`](#msgviz-check) | Selftest — which features work on this machine |
+| [`msgviz drift`](#msgviz-drift) | View / acknowledge source schema-drift events |
 | [`msgviz serve`](#msgviz-serve) | Start the local web server |
 | [`msgviz device`](#msgviz-device) | Manage devices |
 | [`msgviz chat`](#msgviz-chat) | Manage chats |
@@ -111,6 +112,40 @@ Exit codes:
 Run this first after a fresh install — it tells you exactly which
 features will work and which won't, and what to install to enable
 the rest.
+
+---
+
+## `msgviz drift`
+
+Shows **schema-drift events** — recorded when an adapter notices that a
+source's on-disk format changed (Apple's `chat.db`, WhatsApp's
+`ChatStorage.sqlite`, an export in a locale we don't parse). Instead of
+silently producing wrong data, msgviz records the change so you can see
+it and decide what to do. See
+[ARCHITECTURE.md](ARCHITECTURE.md#schema-drift-detection) for how it
+works.
+
+```bash
+msgviz drift                      # pending (un-acknowledged) events
+msgviz drift --all                # include acknowledged ones (audit trail)
+msgviz drift --json               # machine-readable
+msgviz drift --explain whatsapp_live   # full detail for one source
+msgviz drift --ack 17             # acknowledge one event
+msgviz drift --ack-all            # acknowledge everything pending
+msgviz drift --ack-all --source whatsapp_live
+```
+
+Acknowledging only sets a timestamp — the row is never deleted, so the
+history stays. A *fatal* event means that source can't ingest until the
+contract is updated (it likely means Apple/Meta shipped a breaking
+change and msgviz needs a new release).
+
+Exit codes:
+
+| Code | Meaning |
+|---|---|
+| 0 | No pending events, or a pure list/ack operation. |
+| 2 | Un-acknowledged **fatal** events exist (so CI/cron can detect "a source can't ingest"). |
 
 ---
 
@@ -248,6 +283,46 @@ msgviz import imessage --device my_mac --dry-run   # report only, nothing writte
 
 **Note**: `mac_live` devices only work on macOS. On Linux/Windows the
 device is skipped with a notice.
+
+### `msgviz import whatsapp-live`
+
+Incrementally imports WhatsApp **Desktop**'s live `ChatStorage.sqlite`
+(the plaintext SQLite the app keeps on disk). No network, no
+companion-device pairing, no account-ban risk. Re-runs only insert
+new messages (dedup via `source_ref`). **macOS only** by default;
+pass `--db` with an explicit path elsewhere.
+
+Selection is deliberate. With neither `--chat` nor `--all-chats`, the
+command **lists your chats and writes nothing**:
+
+```bash
+msgviz import whatsapp-live --device my_mac_wa
+# → lists every chat with new/total message counts, then exits.
+```
+
+Pick chats (repeatable substring filter) or opt in to everything:
+
+```bash
+msgviz import whatsapp-live --device my_mac_wa --chat "Alice" --chat "Dev Team"
+msgviz import whatsapp-live --device my_mac_wa --all-chats
+```
+
+Before writing, it previews the chats, new-message counts, and **which
+new people would be created** in your archive, then asks to confirm
+(`--yes` to skip; `--dry-run` to preview and write nothing).
+
+```bash
+msgviz import whatsapp-live --device my_mac_wa --all-chats --dry-run
+```
+
+* `--db`: override the `ChatStorage.sqlite` path.
+* `--no-media`: skip attachments.
+* `--me`: your display name (default `Me`).
+
+Schema drift shipped by Meta is recorded to `drift_event` (see
+`msgviz drift`); a *fatal* change aborts the import with nothing
+written. Anything imported is fully reversible — `msgviz delete chat
+<slug>` removes the rows **and** the media files on disk.
 
 ---
 

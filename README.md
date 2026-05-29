@@ -291,6 +291,10 @@ Nothing leaks into your live `data/` without your explicit say-so.
     <td>✅</td>
   </tr>
   <tr>
+    <td><b>WhatsApp live</b> (macOS, WhatsApp Desktop <code>ChatStorage.sqlite</code>)</td>
+    <td>✅ incremental sync (macOS only) — reads the on-disk DB, no network / no pairing</td>
+  </tr>
+  <tr>
     <td><b>WhatsApp export</b> (<code>_chat.txt</code> + attachments, iOS and Android format)</td>
     <td>✅ German / English / Italian / Spanish / Dutch</td>
   </tr>

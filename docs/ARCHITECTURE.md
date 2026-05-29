@@ -114,10 +114,30 @@ Current adapters:
 | `imessage_live` | macOS `~/Library/Messages/chat.db` | Incremental, live watcher |
 | `imessage_backup` | iOS backup in MobileSync folder | Static snapshot |
 | `imessage_db` | Arbitrary Apple chat.db file | Internal helper used by the other two |
+| `whatsapp_live` | macOS WhatsApp Desktop `ChatStorage.sqlite` | Incremental; macOS only; reads the plaintext on-disk DB |
 | `whatsapp_export` | `_chat.txt` + attachments folder | German/English/Italian/Spanish/Dutch |
 
 Adding a new source = drop a module in `msgviz/adapters/`, implement
 the protocol, register it. Nothing in `core/` needs to know about it.
+
+### WhatsApp live (`whatsapp_live`)
+
+WhatsApp Desktop for macOS keeps chats in a **plaintext SQLite** file
+(`ChatStorage.sqlite`, Core Data `ZWA*` tables) under
+`~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/`.
+`whatsapp_live` reads it the same way `imessage_live` reads Apple's
+`chat.db` — a local file read, no network, no companion-device pairing,
+no account-ban risk. (The "why this over a WhatsApp-Web client library"
+rationale lives in [docs/proposals/whatsapp_live.md](proposals/whatsapp_live.md);
+short version: linked-device clients carry a real ban risk, the
+local-file path doesn't.)
+
+`whatsapp_db.py` does the row→`CanonicalMessage` mapping (Core Data
+seconds→Unix epoch, group-sender resolution via `ZWAGROUPMEMBER`, media
+via `ZWAMEDIAITEM`); `whatsapp_live.py` is the `SourceAdapter` wrapper.
+Imported through `msgviz import whatsapp-live` (see
+[docs/CLI.md](CLI.md)). macOS only; Windows/Linux is out of scope for
+now (Windows stores chats in a WebView2 IndexedDB blob, not SQLite).
 
 ---
 
@@ -143,8 +163,55 @@ Cross-platform behavior: on non-Darwin systems, `mac_live` devices are
 skipped with a stderr notice. The live watcher in `server/factory.py`
 no-ops on non-Darwin entirely.
 
-WhatsApp exports are not incremental — they're one-shot imports via
-`tools/import_whatsapp_export.py`, exposed as `msgviz import whatsapp`.
+WhatsApp **live** sync is incremental like iMessage, via
+`tools/import_whatsapp_live.py` (`msgviz import whatsapp-live`),
+deduping on `source_ref` keyed `whatsapp_live:<device>` + the WhatsApp
+`ZSTANZAID`. WhatsApp **exports** are not incremental — one-shot
+imports via `tools/import_whatsapp_export.py` (`msgviz import whatsapp`).
+
+---
+
+## Schema drift detection
+
+Apple and Meta own the on-disk formats msgviz reads, and they change
+them — Apple with macOS/iOS releases, Meta with WhatsApp Desktop
+updates. Left unguarded, a column rename or a new message-type code
+turns into silently-wrong data (messages mis-attributed, rows dropped).
+`msgviz/core/drift.py` makes that **loud** instead.
+
+Each adapter ships a **schema contract** (`*_schema.py`) describing the
+tables/columns it relies on and the enum values it understands. Before
+reading, the adapter probes its source against the contract and
+classifies any difference:
+
+| Severity | Trigger | Behaviour |
+|---|---|---|
+| `fatal` | required table/column missing, or a required column's storage class changed | abort the run, write nothing |
+| `warn` | new column appeared, optional column gone, unknown enum value, a single unparseable row | continue; skip-and-record the offending row |
+| `info` | known-but-rare expected change | recorded only |
+
+Events are persisted in the `drift_event` table (deduped by
+`(source, kind, table, column, observed)` so repeats bump a counter,
+not spam rows; acknowledging sets `acknowledged_at`, never deletes —
+the audit trail survives). The design principle: **no silent
+`except: pass` in any ingestion path.** The one sanctioned place an
+exception is swallowed is `drift.safe_canonicalize`, which turns a
+per-row parse failure into a `row_parse_failed` warn event.
+
+It's cross-cutting: the same machinery covers `imessage_live`,
+`imessage_backup`, `whatsapp_live`, and `whatsapp_export` (whose
+"schema" is its date-line formats + locale markers, so its drift kinds
+are `unknown_export_format` / `unknown_export_locale`). Wide vendor
+tables (Apple's `message` has ~60 columns; we read 14) set
+`flag_new_columns=False` so a normal DB doesn't raise dozens of
+false `new_column` warnings — only *losing* a column we depend on is
+flagged.
+
+Drift surfaces on four channels: the import command's run output,
+`msgviz check`, the dedicated `msgviz drift` command (list / explain /
+acknowledge — see [docs/CLI.md](CLI.md)), and a banner in the web UI
+fed by `GET /api/drift`. The full design rationale is
+[docs/proposals/whatsapp_live.md §13](proposals/whatsapp_live.md).
 
 ---
 

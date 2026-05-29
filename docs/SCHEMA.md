@@ -227,6 +227,35 @@ Schema version and any future global flags.
 Known keys:
 - `schema_version` — currently `'1'`. Bumped by additive migrations only.
 
+### `drift_event`
+
+Schema-drift events recorded when an adapter notices its source's
+on-disk format changed (see
+[ARCHITECTURE.md](ARCHITECTURE.md#schema-drift-detection)). Created
+lazily by the additive migration; not present until first written.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PRIMARY KEY | |
+| `source` | TEXT | adapter tag, e.g. `whatsapp_live` |
+| `schema_version` | INTEGER | the adapter's contract version at record time |
+| `severity` | TEXT | `fatal` / `warn` / `info` |
+| `kind` | TEXT | `missing_required_column`, `new_column`, `unknown_enum_value`, `row_parse_failed`, `unknown_export_format`, … |
+| `table_name` | TEXT | source table (NULL for text-format adapters) |
+| `column_name` | TEXT | source column (NULL where N/A) |
+| `observed` | TEXT | what was seen |
+| `expected` | TEXT | what the contract expected |
+| `detail` | TEXT | human-readable, no PII |
+| `first_seen` | INTEGER | Unix seconds |
+| `last_seen` | INTEGER | Unix seconds |
+| `occurrence_count` | INTEGER | bumped on repeat (dedup), default 1 |
+| `acknowledged_at` | INTEGER | NULL until acknowledged; never deleted |
+
+Unique index `drift_event_dedup` on
+`(source, kind, COALESCE(table_name,''), COALESCE(column_name,''),
+COALESCE(observed,''))` — a repeated drift bumps `occurrence_count`
+and `last_seen` instead of inserting a new row.
+
 ---
 
 ## Conventions
