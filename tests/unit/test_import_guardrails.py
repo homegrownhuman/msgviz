@@ -88,7 +88,7 @@ def test_whatsapp_chats_lists_without_device(tmp_path, monkeypatch) -> None:
     assert res.exit_code == 0
     assert "Alice" in res.stdout
     assert "Dev Team" in res.stdout
-    assert "2 WhatsApp chat(s)" in res.stdout
+    assert "3 WhatsApp chat(s)" in res.stdout
 
 
 def test_whatsapp_chats_default_min_is_10(tmp_path, monkeypatch) -> None:
@@ -169,7 +169,9 @@ def test_whatsapp_chats_json(tmp_path, monkeypatch) -> None:
     assert res.exit_code == 0
     data = json.loads(res.stdout)
     titles = {c["title"] for c in data["chats"]}
-    assert titles == {"Alice", "Dev Team"}
+    # Alice, Dev Team, plus the un-named 1:1 (titled by its contact JID).
+    assert {"Alice", "Dev Team"} <= titles
+    assert len(data["chats"]) == 3
 
 
 def test_whatsapp_chats_min_messages_excludes_below(tmp_path, monkeypatch) -> None:
@@ -279,7 +281,7 @@ def test_all_chats_yes_imports(home) -> None:
     ])
     assert res.exit_code == 0
     assert "Imported:" in res.stdout
-    assert _msg_count(home) == 9       # Alice 5 + Dev Team 4
+    assert _msg_count(home) == 12      # Alice 5 + Dev Team 4 + un-named 3
 
 
 def test_chat_filter_imports_only_match(home) -> None:
@@ -326,11 +328,12 @@ def test_confirmation_abort_writes_nothing(home) -> None:
 def test_preview_live_detects_new_persons(home) -> None:
     from tools.import_whatsapp_live import preview_live
     plan = preview_live(device_slug="mac_wa", db_path=str(WA_DB), me_name="Me")
-    assert len(plan["chats"]) == 2
-    # 3 new senders: the 1:1 partner "Alice" (named) + the two group
-    # member JIDs (group sender→name resolution is a separate concern).
+    assert len(plan["chats"]) == 3
+    # New senders: the 1:1 partner "Alice" (named), the un-named 1:1
+    # collapsed to its contact JID, and the two group member JIDs.
     assert "Alice" in plan["new_persons"]
-    assert len(plan["new_persons"]) == 3
+    assert "491700000009@s.whatsapp.net" in plan["new_persons"]  # un-named 1:1
+    assert len(plan["new_persons"]) == 4
 
 
 def test_preview_live_matches_existing_person(home) -> None:
@@ -345,7 +348,7 @@ def test_preview_live_matches_existing_person(home) -> None:
     from tools.import_whatsapp_live import preview_live
     plan = preview_live(device_slug="mac_wa", db_path=str(WA_DB), me_name="Me")
     assert "Alice" not in plan["new_persons"]
-    assert len(plan["new_persons"]) == 2
+    assert len(plan["new_persons"]) == 3
 
 
 # ---------------------------------------------------------------------------

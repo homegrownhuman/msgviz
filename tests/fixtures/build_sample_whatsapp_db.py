@@ -141,6 +141,16 @@ def build() -> Path:
                 ZHIDDEN, ZREMOVED)
                VALUES (2, 1, '120363000000000001@g.us', 'Dev Team', 0, 0, 0)"""
         )
+        # 1:1 session with NO saved name (pk=3): a contact you never
+        # saved, who also went through the phone→@lid migration. Tests
+        # that the collapse falls back to the stable ZCONTACTJID when
+        # there's no ZPARTNERNAME, rather than re-splitting per message.
+        con.execute(
+            """INSERT INTO ZWACHATSESSION
+               (Z_PK, ZSESSIONTYPE, ZCONTACTJID, ZPARTNERNAME, ZARCHIVED,
+                ZHIDDEN, ZREMOVED)
+               VALUES (3, 0, '491700000009@s.whatsapp.net', NULL, 0, 0, 0)"""
+        )
 
         # --- Group members (for session 2) -----------------------------------
         con.execute(
@@ -215,6 +225,28 @@ def build() -> Path:
                    VALUES (?, 2, ?, ?, ?, ?, ?, '120363000000000001@g.us', ?,
                            0, ?, ?)""",
                 (pk, is_me, mtype, text, core, core, stanza, gm, off),
+            )
+
+        # --- un-named 1:1 messages (session 3) -------------------------------
+        # Same contact, phone JID then @lid — but NO ZPARTNERNAME. The
+        # collapse must fall back to the session's ZCONTACTJID
+        # (491700000009@s.whatsapp.net), not split into two senders.
+        unnamed = [
+            (400, 0,   0, 0, "hi from the phone JID",  "STANZA-400",
+             "491700000009@s.whatsapp.net"),
+            (401, 60,  1, 0, "reply from me",          "STANZA-401", None),
+            (402, 120, 0, 0, "now from a @lid",        "STANZA-402",
+             "71112223334445@lid"),
+        ]
+        for pk, off, is_me, mtype, text, stanza, from_jid in unnamed:
+            core = BASE_CORE + off
+            con.execute(
+                """INSERT INTO ZWAMESSAGE
+                   (Z_PK, ZCHATSESSION, ZISFROMME, ZMESSAGETYPE, ZTEXT,
+                    ZMESSAGEDATE, ZSENTDATE, ZFROMJID, ZSTANZAID,
+                    ZGROUPEVENTTYPE, ZGROUPMEMBER, ZSORT)
+                   VALUES (?, 3, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)""",
+                (pk, is_me, mtype, text, core, core, from_jid, stanza, off),
             )
 
         con.commit()

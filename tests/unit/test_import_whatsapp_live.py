@@ -76,12 +76,12 @@ def _db(home):
 
 def test_full_ingest(home) -> None:
     stats = _import()
-    assert stats["chats"] == 2
-    assert stats["new"] == 9           # 5 one-to-one + 4 group
+    assert stats["chats"] == 3
+    assert stats["new"] == 12          # 5 Alice + 4 group + 3 un-named 1:1
     assert stats["skipped_existing"] == 0
     con = _db(home)
-    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 9
-    assert con.execute("SELECT COUNT(*) FROM chat").fetchone()[0] == 2
+    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 12
+    assert con.execute("SELECT COUNT(*) FROM chat").fetchone()[0] == 3
     con.close()
 
 
@@ -91,7 +91,7 @@ def test_source_refs_written(home) -> None:
     n = con.execute(
         "SELECT COUNT(*) FROM source_ref WHERE source='whatsapp_live:mac_wa'"
     ).fetchone()[0]
-    assert n == 9
+    assert n == 12
     con.close()
 
 
@@ -99,16 +99,16 @@ def test_reimport_is_incremental(home) -> None:
     _import()
     stats2 = _import()
     assert stats2["new"] == 0
-    assert stats2["skipped_existing"] == 9
+    assert stats2["skipped_existing"] == 12
     con = _db(home)
     # No duplication.
-    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 9
+    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 12
     con.close()
 
 
 def test_dry_run_writes_nothing(home) -> None:
     stats = _import(report_only=True)
-    assert stats["new"] == 9           # would-import count
+    assert stats["new"] == 12          # would-import count
     con = _db(home)
     assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 0
     con.close()

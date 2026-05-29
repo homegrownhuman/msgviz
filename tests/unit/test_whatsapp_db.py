@@ -85,11 +85,13 @@ def test_probe_missing_required_column_is_fatal() -> None:
 
 def test_list_chats(con) -> None:
     chats = {c["pk"]: c for c in wadb.list_chats_from_db(con)}
-    assert set(chats) == {1, 2}
+    assert set(chats) == {1, 2, 3}        # Alice 1:1, Dev Team group, un-named 1:1
     assert chats[1]["session_type"] == ws.SESSION_TYPE_ONE_TO_ONE
     assert chats[1]["partner_name"] == "Alice"
     assert chats[2]["session_type"] == ws.SESSION_TYPE_GROUP
     assert chats[2]["partner_name"] == "Dev Team"
+    assert chats[3]["session_type"] == ws.SESSION_TYPE_ONE_TO_ONE
+    assert chats[3]["partner_name"] is None     # un-named contact
 
 
 # ---------------------------------------------------------------------------

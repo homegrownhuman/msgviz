@@ -110,7 +110,7 @@ def test_open_raises_on_fatal_drift(tmp_path) -> None:
 
 def test_list_chats_shape(adapter) -> None:
     chats = {c.source_id: c for c in adapter.list_chats()}
-    assert set(chats) == {"1", "2"}
+    assert set(chats) == {"1", "2", "3"}
 
     one = chats["1"]
     assert one.slug == "mac_test_wa/chat_1"
@@ -153,6 +153,15 @@ def test_iter_messages_one_to_one_collapses_to_partner(adapter) -> None:
     msgs = list(adapter.iter_messages(chats["1"]))
     non_me = {m.sender_raw for m in msgs if not m.is_me}
     assert non_me == {"Alice"}
+
+
+def test_iter_messages_unnamed_one_to_one_collapses_to_contact_jid(adapter) -> None:
+    # An un-named 1:1 (no ZPARTNERNAME) that also went phone→@lid must
+    # collapse to the session's stable ZCONTACTJID, not split per message.
+    chats = {c.source_id: c for c in adapter.list_chats()}
+    msgs = list(adapter.iter_messages(chats["3"]))
+    non_me = {m.sender_raw for m in msgs if not m.is_me}
+    assert non_me == {"491700000009@s.whatsapp.net"}
 
 
 def test_iter_messages_group_resolves_senders(adapter) -> None:

@@ -81,9 +81,12 @@ class WhatsAppLiveAdapter:
         self.last_report: Optional[drift.SchemaReport] = None
         #: is_group flag per chat source_id, cached from list_chats().
         self._is_group: dict[str, bool] = {}
-        #: raw ZPARTNERNAME per 1:1 chat source_id (None if unnamed),
-        #: cached from list_chats() so iter_messages can attribute every
-        #: non-me message to the one partner.
+        #: 1:1 canonical sender identity per chat source_id (None for
+        #: groups), cached from list_chats(). The partner's display name
+        #: when known, else the session's stable ZCONTACTJID — so every
+        #: non-me message in a 1:1 collapses to one identity across the
+        #: phone-JID / @lid migration. Named loosely "_partner_name" for
+        #: history; it can hold a JID.
         self._partner_name: dict[str, Optional[str]] = {}
 
     # -- lifecycle ----------------------------------------------------------
@@ -139,12 +142,20 @@ class WhatsAppLiveAdapter:
             self._is_group[str(pk)] = is_group
             jid = c["contact_jid"] or ""
             partner = (c["partner_name"] or "").strip() or None
-            # Only cache a *real* name for 1:1 sender attribution; a
-            # bare JID partner stays None so we fall back to the message
-            # JID rather than relabelling with the chat's own JID.
-            self._partner_name[str(pk)] = (
-                None if is_group or (partner and "@" in partner) else partner
-            )
+            # 1:1 canonical identity: in a 1:1 every non-me message is
+            # the one partner, but WhatsApp may carry them under a phone
+            # JID on older messages and a @lid on newer ones (the @lid
+            # migration). WhatsApp Desktop keeps NO local phone↔@lid map,
+            # but the chat session's ZCONTACTJID stays stable across the
+            # migration — so it's the canonical id that bridges both.
+            # Prefer the human name for display; fall back to the stable
+            # contact JID (not the per-message JID, which is what splits).
+            if is_group:
+                self._partner_name[str(pk)] = None
+            elif partner and "@" not in partner:
+                self._partner_name[str(pk)] = partner
+            else:
+                self._partner_name[str(pk)] = jid or None
             title = c["partner_name"] or jid or f"chat_{pk}"
             yield ChatSpec(
                 slug=f"{self.device_slug}/chat_{pk}",
