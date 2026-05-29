@@ -87,6 +87,82 @@ def whatsapp(
     console.print(f"[green]Import OK:[/green] {result_slug}")
 
 
+@app.command("whatsapp-live")
+def whatsapp_live(
+    device: str = typer.Option(..., "--device", "-d", help="Device slug the WhatsApp install is attached to."),
+    chat: str = typer.Option(
+        None, "--chat", "-c",
+        help="Only chats whose title or JID contains this text (case-insensitive). Default: all chats.",
+    ),
+    me_name: str = typer.Option(
+        None, "--me", help="Your display name (default: 'Me')."
+    ),
+    db: Path = typer.Option(
+        None, "--db",
+        help="Override the ChatStorage.sqlite path (default: macOS WhatsApp Desktop container).",
+    ),
+    no_media: bool = typer.Option(False, "--no-media", help="Skip attachments."),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Count new messages; write nothing."
+    ),
+    progress: bool = typer.Option(True, "--progress/--no-progress", help="Show the Rich progress tree."),
+) -> None:
+    """Incrementally import WhatsApp Desktop's live ChatStorage.sqlite (macOS).
+
+    Reads the plaintext SQLite the WhatsApp Desktop app keeps on disk —
+    no network, no companion-device pairing, no account-ban risk. Re-runs
+    only insert genuinely-new messages (dedup via source_ref). Schema
+    drift shipped by Meta is recorded to the drift_event table and a
+    fatal change aborts the import with nothing written — see
+    `msgviz drift`.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+    _repo_root = _Path(__file__).resolve().parent.parent.parent
+    if (_repo_root / "tools").is_dir() and str(_repo_root) not in _sys.path:
+        _sys.path.insert(0, str(_repo_root))
+    from tools.import_whatsapp_live import import_live
+
+    from msgviz.core.progress import make_reporter
+
+    if _sys.platform != "darwin" and db is None:
+        console.print(
+            "[yellow]Note:[/yellow] WhatsApp Desktop live import targets the "
+            "macOS container by default. On other platforms pass --db with an "
+            "explicit ChatStorage.sqlite path."
+        )
+
+    reporter = make_reporter("terminal" if progress else "null")
+    try:
+        stats = import_live(
+            device_slug=device,
+            db_path=str(db) if db else None,
+            me_name=me_name,
+            chat_filter=chat,
+            with_media=not no_media,
+            report_only=dry_run,
+            reporter=reporter,
+        )
+    except SystemExit as e:
+        die(f"{e}")
+    except Exception as e:
+        die(f"Import failed: {e}")
+    finally:
+        reporter.close()
+
+    verb = "Would import" if dry_run else "Imported"
+    console.print(
+        f"[green]{verb}:[/green] {stats['new']} new message(s) across "
+        f"{stats['chats']} chat(s) · {stats['media']} media · "
+        f"{stats['skipped_existing']} already present"
+    )
+    if stats["drift_warn"]:
+        console.print(
+            f"[yellow]⚠ {stats['drift_warn']} schema-drift warning(s)[/yellow] "
+            f"— see [bold]msgviz drift[/bold]."
+        )
+
+
 @app.command("imessage")
 def imessage(
     device: str = typer.Option(..., "--device", "-d", help="Device slug."),
@@ -119,5 +195,5 @@ def imessage(
         sync_mod.sync(report_only=report_only)
     except Exception as e:
         die(f"Sync failed: {e}")
-    console.print(f"[green]iMessage sync done[/green]"
+    console.print("[green]iMessage sync done[/green]"
                   + (f" (chat={chat})" if chat else ""))
