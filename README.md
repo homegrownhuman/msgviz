@@ -86,11 +86,19 @@ group chats, and reverse-proxy setup, see
 Click into any chat for the timeline, the heatmap, the media overview,
 or the voice-notes browser (click a thumbnail for the full view):
 
-<p align="center">
-  <a href="docs/screenshots/page-chat.png" title="Chat + heatmap"><img src="docs/screenshots/page-chat.png" width="32%" alt="Chat page with messages, voice notes, and side heatmap"></a>
-  <a href="docs/screenshots/page-media.jpg" title="Media overview"><img src="docs/screenshots/page-media.jpg" width="32%" alt="Media overview grid with photo thumbnails"></a>
-  <a href="docs/screenshots/page-voice.png" title="Voice notes"><img src="docs/screenshots/page-voice.png" width="32%" alt="Voice notes browser with inline playback"></a>
-</p>
+<table width="100%">
+  <tr>
+    <td width="33%" align="center" valign="top">
+      <a href="docs/screenshots/page-chat.png" title="Chat + heatmap"><img src="docs/screenshots/page-chat.png" width="100%" alt="Chat page with messages, voice notes, and side heatmap"></a>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <a href="docs/screenshots/page-media.jpg" title="Media overview"><img src="docs/screenshots/page-media.jpg" width="100%" alt="Media overview grid with photo thumbnails"></a>
+    </td>
+    <td width="33%" align="center" valign="top">
+      <a href="docs/screenshots/page-voice.png" title="Voice notes"><img src="docs/screenshots/page-voice.png" width="100%" alt="Voice notes browser with inline playback"></a>
+    </td>
+  </tr>
+</table>
 
 Your real archive under `data/` is not touched — see
 [*The Three-Environment Model*](docs/GETTING_STARTED.md#2-the-three-environment-model).
@@ -326,19 +334,19 @@ Deep architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   <tr>
     <td><a href="https://github.com/ReagentX/imessage-exporter">ReagentX/imessage-exporter</a></td>
     <td>iMessage → text/HTML</td>
-    <td>5.2k</td>
+    <td><a href="https://github.com/ReagentX/imessage-exporter/stargazers"><img src="https://img.shields.io/github/stars/ReagentX/imessage-exporter?style=flat-square&label=&color=gray" alt="stars"></a></td>
     <td>viewer + multi-source + local transcription, not just export</td>
   </tr>
   <tr>
     <td><a href="https://github.com/KnugiHK/WhatsApp-Chat-Exporter">KnugiHK/WhatsApp-Chat-Exporter</a></td>
     <td>WhatsApp backups → HTML</td>
-    <td>1.1k</td>
+    <td><a href="https://github.com/KnugiHK/WhatsApp-Chat-Exporter/stargazers"><img src="https://img.shields.io/github/stars/KnugiHK/WhatsApp-Chat-Exporter?style=flat-square&label=&color=gray" alt="stars"></a></td>
     <td>merges WhatsApp and iMessage, dedupes by person</td>
   </tr>
   <tr>
     <td><a href="https://github.com/Pustur/whatsapp-chat-parser-website">Pustur/whatsapp-chat-parser-website</a></td>
     <td>WhatsApp export, browser-only</td>
-    <td>264</td>
+    <td><a href="https://github.com/Pustur/whatsapp-chat-parser-website/stargazers"><img src="https://img.shields.io/github/stars/Pustur/whatsapp-chat-parser-website?style=flat-square&label=&color=gray" alt="stars"></a></td>
     <td>handles images + audio + transcription, multi-source</td>
   </tr>
 </table>
