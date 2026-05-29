@@ -334,19 +334,19 @@ Deep architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   <tr>
     <td><a href="https://github.com/ReagentX/imessage-exporter">ReagentX/imessage-exporter</a></td>
     <td>iMessage → text/HTML</td>
-    <td><a href="https://github.com/ReagentX/imessage-exporter/stargazers"><img src="https://img.shields.io/github/stars/ReagentX/imessage-exporter?style=flat-square&label=&color=gray" alt="stars"></a></td>
+    <td><a href="https://github.com/ReagentX/imessage-exporter/stargazers"><img src="https://img.shields.io/github/stars/ReagentX/imessage-exporter?style=flat-square&label=&color=gray&cacheSeconds=86400" alt="stars"></a></td>
     <td>viewer + multi-source + local transcription, not just export</td>
   </tr>
   <tr>
     <td><a href="https://github.com/KnugiHK/WhatsApp-Chat-Exporter">KnugiHK/WhatsApp-Chat-Exporter</a></td>
     <td>WhatsApp backups → HTML</td>
-    <td><a href="https://github.com/KnugiHK/WhatsApp-Chat-Exporter/stargazers"><img src="https://img.shields.io/github/stars/KnugiHK/WhatsApp-Chat-Exporter?style=flat-square&label=&color=gray" alt="stars"></a></td>
+    <td><a href="https://github.com/KnugiHK/WhatsApp-Chat-Exporter/stargazers"><img src="https://img.shields.io/github/stars/KnugiHK/WhatsApp-Chat-Exporter?style=flat-square&label=&color=gray&cacheSeconds=86400" alt="stars"></a></td>
     <td>merges WhatsApp and iMessage, dedupes by person</td>
   </tr>
   <tr>
     <td><a href="https://github.com/Pustur/whatsapp-chat-parser-website">Pustur/whatsapp-chat-parser-website</a></td>
     <td>WhatsApp export, browser-only</td>
-    <td><a href="https://github.com/Pustur/whatsapp-chat-parser-website/stargazers"><img src="https://img.shields.io/github/stars/Pustur/whatsapp-chat-parser-website?style=flat-square&label=&color=gray" alt="stars"></a></td>
+    <td><a href="https://github.com/Pustur/whatsapp-chat-parser-website/stargazers"><img src="https://img.shields.io/github/stars/Pustur/whatsapp-chat-parser-website?style=flat-square&label=&color=gray&cacheSeconds=86400" alt="stars"></a></td>
     <td>handles images + audio + transcription, multi-source</td>
   </tr>
 </table>
