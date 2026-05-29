@@ -279,11 +279,11 @@ Nothing leaks into your live `data/` without your explicit say-so.
   </tr>
   <tr>
     <td>Signal</td>
-    <td>🔜 adapter open for contributions</td>
+    <td>⏳ adapter open for contributions</td>
   </tr>
   <tr>
     <td>Telegram</td>
-    <td>🔜 ditto</td>
+    <td>⏳ ditto</td>
   </tr>
 </table>
 
