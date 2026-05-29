@@ -86,21 +86,21 @@ group chats, and reverse-proxy setup, see
 Click into any chat for the timeline, the heatmap, the media overview,
 or the voice-notes browser (click a thumbnail for the full view):
 
-<table>
-  <tr>
-    <td width="33%">
+<table border="0" cellspacing="0" cellpadding="0">
+  <tr style="border:none">
+    <td width="33%" style="border:none" valign="top">
       <a href="docs/screenshots/page-chat.png">
         <img src="docs/screenshots/page-chat.png" alt="Chat page with messages, voice notes, and side heatmap">
       </a>
       <p align="center"><sub>Chat + heatmap</sub></p>
     </td>
-    <td width="33%">
+    <td width="33%" style="border:none" valign="top">
       <a href="docs/screenshots/page-media.png">
         <img src="docs/screenshots/page-media.png" alt="Media overview grid with photo thumbnails">
       </a>
       <p align="center"><sub>Media overview</sub></p>
     </td>
-    <td width="33%">
+    <td width="33%" style="border:none" valign="top">
       <a href="docs/screenshots/page-voice.png">
         <img src="docs/screenshots/page-voice.png" alt="Voice notes browser with inline playback">
       </a>
