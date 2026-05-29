@@ -231,6 +231,12 @@ msgviz import whatsapp \
 * `--limit`: dry-run style — only the first N messages.
 * `--no-media`: skip images/audio/videos.
 
+While the import runs, you get a live progress tree showing each phase
+with a ✓ marker, item counts, durations, and the most recent status
+note:
+
+![msgviz import whatsapp — live progress tree](screenshots/import.svg)
+
 ### `msgviz import imessage`
 
 Reads Apple's `chat.db` (live or backup) and syncs only new content.
