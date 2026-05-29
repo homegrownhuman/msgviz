@@ -62,19 +62,97 @@ def _msg_count(home):
 
 
 # ---------------------------------------------------------------------------
-# Refuse-and-list
+# No-selection → error pointing at discovery (not a silent "import nothing")
 # ---------------------------------------------------------------------------
 
-def test_bare_device_lists_and_writes_nothing(home) -> None:
+def test_no_selection_errors_and_points_to_discovery(home) -> None:
     res = runner.invoke(app, [
         "import", "whatsapp-live", "--device", "mac_wa", "--db", str(WA_DB),
     ])
+    assert res.exit_code != 0
+    assert "No chat selected" in res.output
+    assert "msgviz whatsapp chats" in res.output
+    assert _msg_count(home) == 0
+
+
+# ---------------------------------------------------------------------------
+# Discovery: msgviz whatsapp chats (no device needed)
+# ---------------------------------------------------------------------------
+
+def test_whatsapp_chats_lists_without_device(tmp_path, monkeypatch) -> None:
+    # A bare MSGVIZ_HOME with NO initialized DB / device at all.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, ["whatsapp", "chats", "--db", str(WA_DB)])
     assert res.exit_code == 0
-    assert "No chat selected" in res.stdout
     assert "Alice" in res.stdout
     assert "Dev Team" in res.stdout
-    assert "Nothing was written" in res.stdout
-    assert _msg_count(home) == 0
+    assert "2 WhatsApp chat(s)" in res.stdout
+
+
+def test_whatsapp_chats_filter(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, ["whatsapp", "chats", "--chat", "Alice", "--db", str(WA_DB)])
+    assert res.exit_code == 0
+    assert "Alice" in res.stdout
+    assert "Dev Team" not in res.stdout
+
+
+def test_whatsapp_chats_json(tmp_path, monkeypatch) -> None:
+    import json
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, ["whatsapp", "chats", "--json", "--db", str(WA_DB)])
+    assert res.exit_code == 0
+    data = json.loads(res.stdout)
+    titles = {c["title"] for c in data["chats"]}
+    assert titles == {"Alice", "Dev Team"}
+
+
+# ---------------------------------------------------------------------------
+# Interactive device creation on import
+# ---------------------------------------------------------------------------
+
+def test_import_offers_device_creation(tmp_path, monkeypatch) -> None:
+    # Fresh DB, NO device. Import should offer to create it.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    from msgviz.paths import db_file, schema_sql, data_dir
+    data_dir().mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(db_file())
+    con.executescript(Path(schema_sql()).read_text())
+    con.commit()
+    con.close()
+    # inputs: create? y / name (default) / owner (default) / proceed? y
+    res = runner.invoke(app, [
+        "import", "whatsapp-live", "--device", "new_wa", "--chat", "Alice",
+        "--no-media", "--no-progress", "--db", str(WA_DB),
+    ], input="y\n\n\ny\n")
+    assert res.exit_code == 0
+    con = sqlite3.connect(db_file())
+    assert con.execute(
+        "SELECT COUNT(*) FROM device WHERE slug='new_wa'"
+    ).fetchone()[0] == 1
+    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 4
+    con.close()
+
+
+def test_import_device_creation_declined_aborts(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    from msgviz.paths import db_file, schema_sql, data_dir
+    data_dir().mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(db_file())
+    con.executescript(Path(schema_sql()).read_text())
+    con.commit()
+    con.close()
+    # Decline device creation.
+    res = runner.invoke(app, [
+        "import", "whatsapp-live", "--device", "nope_wa", "--chat", "Alice",
+        "--no-media", "--no-progress", "--db", str(WA_DB),
+    ], input="n\n")
+    assert res.exit_code != 0
+    con = sqlite3.connect(db_file())
+    assert con.execute(
+        "SELECT COUNT(*) FROM device WHERE slug='nope_wa'"
+    ).fetchone()[0] == 0
+    con.close()
 
 
 # ---------------------------------------------------------------------------

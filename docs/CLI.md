@@ -37,6 +37,7 @@ msgviz --install-completion            # shell completion for your shell
 | [`msgviz device`](#msgviz-device) | Manage devices |
 | [`msgviz chat`](#msgviz-chat) | Manage chats |
 | [`msgviz person`](#msgviz-person) | Manage persons |
+| [`msgviz whatsapp`](#msgviz-whatsapp-chats) | Inspect WhatsApp Desktop (discovery) |
 | [`msgviz import`](#msgviz-import) | Import data |
 | [`msgviz transcribe`](#msgviz-transcribe) | Audio transcription |
 | [`msgviz ocr`](#msgviz-ocr) | Image OCR |
@@ -245,6 +246,25 @@ msgviz person merge 5 12    # keeps id=5, merges id=12 into it
 
 ---
 
+## `msgviz whatsapp chats`
+
+Lists the chats in your WhatsApp Desktop database — **discovery, no
+setup**. Needs no device, no msgviz archive; it just reads the on-disk
+`ChatStorage.sqlite` so you can see what's there before importing.
+macOS only by default; pass `--db` elsewhere.
+
+```bash
+msgviz whatsapp chats                       # all chats + message counts
+msgviz whatsapp chats --chat "Alice"        # filter by title/JID substring
+msgviz whatsapp chats --json                # machine-readable
+```
+
+Typical flow: run this first, then
+[`msgviz import whatsapp-live`](#msgviz-import-whatsapp-live) with the
+chats you want.
+
+---
+
 ## `msgviz import`
 
 ### `msgviz import whatsapp`
@@ -292,20 +312,24 @@ companion-device pairing, no account-ban risk. Re-runs only insert
 new messages (dedup via `source_ref`). **macOS only** by default;
 pass `--db` with an explicit path elsewhere.
 
-Selection is deliberate. With neither `--chat` nor `--all-chats`, the
-command **lists your chats and writes nothing**:
+First, see what's there (no setup needed — see
+[`msgviz whatsapp chats`](#msgviz-whatsapp-chats)):
 
 ```bash
-msgviz import whatsapp-live --device my_mac_wa
-# → lists every chat with new/total message counts, then exits.
+msgviz whatsapp chats
 ```
 
-Pick chats (repeatable substring filter) or opt in to everything:
+Then import — selection is deliberate. Pick chats (repeatable substring
+filter) or opt in to everything:
 
 ```bash
 msgviz import whatsapp-live --device my_mac_wa --chat "Alice" --chat "Dev Team"
 msgviz import whatsapp-live --device my_mac_wa --all-chats
 ```
+
+With neither `--chat` nor `--all-chats`, the command errors and points
+you at `msgviz whatsapp chats` — it won't silently import nothing. If
+the `--device` doesn't exist yet, it offers to create it.
 
 Before writing, it previews the chats, new-message counts, and **which
 new people would be created** in your archive, then asks to confirm

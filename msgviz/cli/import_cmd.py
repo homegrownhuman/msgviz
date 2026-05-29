@@ -11,6 +11,40 @@ from ._helpers import confirm_or_abort, console, die
 app = typer.Typer(no_args_is_help=True, help="Import data.")
 
 
+def _ensure_device(slug: str) -> None:
+    """Make sure a device with this slug exists; offer to create it.
+
+    Cuts the setup friction: instead of failing with "device not found"
+    and forcing a separate `msgviz device add`, we ask. Declined → exit.
+    """
+    from ._helpers import open_db
+    with open_db(readonly=True) as con:
+        row = con.execute(
+            "SELECT 1 FROM device WHERE slug = ?", (slug,)
+        ).fetchone()
+    if row is not None:
+        return
+
+    console.print(f"[yellow]Device '{slug}' does not exist yet.[/yellow]")
+    confirm_or_abort(f"Create device '{slug}' now?", default=True)
+    name = typer.prompt("Display name for this device", default=slug)
+    owner = typer.prompt("Your name (the 'me' in these chats)", default="Me")
+    with open_db() as con:
+        pid = con.execute(
+            "SELECT id FROM person WHERE display_name = ?", (owner,)
+        ).fetchone()
+        pid = pid[0] if pid else con.execute(
+            "INSERT INTO person(display_name) VALUES(?)", (owner,)
+        ).lastrowid
+        con.execute(
+            "INSERT INTO device(slug, name, type, owner_person_id) "
+            "VALUES(?,?,?,?)",
+            (slug, name, "mac_live", pid),
+        )
+        con.commit()
+    console.print(f"[green]Device created:[/green] {slug} (owner={owner})")
+
+
 @app.command("whatsapp")
 def whatsapp(
     device: str = typer.Option(..., "--device", "-d", help="Device slug the chat is attached to."),
@@ -151,31 +185,19 @@ def whatsapp_live(
     chat_filters = list(chat) if chat else []
     db_path = str(db) if db else None
 
-    # --- Guardrail: refuse to import without an explicit selection ---------
+    # --- Guardrail: require an explicit selection -------------------------
+    # Discovery ("what's in my WhatsApp?") lives in `msgviz whatsapp chats`,
+    # which needs no device. Import is for writing — so it needs a real
+    # selection. No silent "import that imports nothing".
     if not chat_filters and not all_chats:
-        try:
-            plan = preview_live(device_slug=device, db_path=db_path, me_name=me_name)
-        except SystemExit as e:
-            die(f"{e}")
-        console.print(
-            f"[bold]No chat selected.[/bold] {len(plan['chats'])} chat(s) "
-            f"available for device '{device}':\n"
+        die(
+            "No chat selected. To see what's available:\n"
+            "    msgviz whatsapp chats\n"
+            "Then import with --chat \"<name>\" (repeatable) or --all-chats."
         )
-        rows = sorted(plan["chats"], key=lambda c: c["new"], reverse=True)
-        for c in rows[:50]:
-            kind = "group" if c["is_group"] else "1:1"
-            console.print(
-                f"  [cyan]{c['title']}[/cyan] [dim]({kind})[/dim] — "
-                f"{c['new']} new of {c['total']} msgs  [dim]{c['slug']}[/dim]"
-            )
-        if len(rows) > 50:
-            console.print(f"  [dim]… and {len(rows) - 50} more[/dim]")
-        console.print(
-            "\nPick chats with [bold]--chat <text>[/bold] (repeatable), or "
-            "import everything with [bold]--all-chats[/bold]. "
-            "Nothing was written."
-        )
-        raise typer.Exit(code=0)
+
+    # --- Ensure the target device exists (offer to create it) -------------
+    _ensure_device(device)
 
     # --- Preview + confirm before writing ---------------------------------
     # A single combined filter (substring OR across the given --chat values

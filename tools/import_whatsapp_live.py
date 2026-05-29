@@ -68,6 +68,59 @@ def _chat_db_slug(device_slug: str, source_id: str) -> str:
     return f"{device_slug}/chat_{source_id}"
 
 
+def list_whatsapp_chats(
+    db_path: Optional[str] = None,
+    chat_filter: Optional[str] = None,
+) -> dict:
+    """List chats present in the WhatsApp Desktop DB — pure discovery.
+
+    Requires nothing from the msgviz archive (no device, no
+    visualizer.db). Reads only the source ``ChatStorage.sqlite``.
+    Returns {chats: [{title, is_group, subtitle, total, source_id}],
+    drift_warn: int}. Raises SystemExit on fatal schema drift.
+
+    This is what powers ``msgviz whatsapp chats`` — "what's even in my
+    WhatsApp?" — answerable before any setup.
+    """
+    out = {"chats": [], "drift_warn": 0}
+
+    def count_drift(event):
+        if event.severity == "warn":
+            out["drift_warn"] += 1
+
+    adapter = WhatsAppLiveAdapter(
+        device_slug="_preview", db_path=db_path, me_name="Me",
+        on_drift=count_drift,
+    )
+    try:
+        report = adapter.open()
+    except drift.SchemaDriftError as e:
+        adapter.close()
+        raise SystemExit(
+            f"WhatsApp schema drift (fatal) — cannot list chats. "
+            f"Run `msgviz drift --explain whatsapp_live`. ({e})"
+        )
+    out["drift_warn"] = report.warn_count
+
+    all_chats = list(adapter.list_chats())
+    if chat_filter:
+        needle = chat_filter.lower()
+        all_chats = [
+            c for c in all_chats
+            if needle in (c.title or "").lower()
+            or needle in (c.subtitle or "").lower()
+        ]
+    for chat in all_chats:
+        total = sum(1 for _ in adapter.iter_messages(chat))
+        out["chats"].append({
+            "title": chat.title, "is_group": chat.is_group,
+            "subtitle": chat.subtitle, "total": total,
+            "source_id": chat.source_id,
+        })
+    adapter.close()
+    return out
+
+
 def preview_live(
     device_slug: str,
     db_path: Optional[str] = None,

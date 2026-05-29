@@ -19,6 +19,7 @@ from . import (
     serve_cmd,
     status_cmd,
     transcribe_cmd,
+    whatsapp_cmd,
 )
 
 app = typer.Typer(
@@ -49,6 +50,7 @@ app.add_typer(chat_cmd.app, name="chat", help="Manage chats.")
 app.add_typer(person_cmd.app, name="person", help="Manage persons.")
 app.add_typer(import_cmd.app, name="import", help="Import data.")
 app.add_typer(delete_cmd.app, name="delete", help="Delete data sets.")
+app.add_typer(whatsapp_cmd.app, name="whatsapp", help="Inspect WhatsApp Desktop.")
 
 
 def main() -> None:
