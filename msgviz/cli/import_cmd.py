@@ -6,7 +6,7 @@ from pathlib import Path
 
 import typer
 
-from ._helpers import console, die
+from ._helpers import confirm_or_abort, console, die
 
 app = typer.Typer(no_args_is_help=True, help="Import data.")
 
@@ -90,9 +90,15 @@ def whatsapp(
 @app.command("whatsapp-live")
 def whatsapp_live(
     device: str = typer.Option(..., "--device", "-d", help="Device slug the WhatsApp install is attached to."),
-    chat: str = typer.Option(
+    chat: list[str] = typer.Option(
         None, "--chat", "-c",
-        help="Only chats whose title or JID contains this text (case-insensitive). Default: all chats.",
+        help="Import only chats whose title or JID contains this text "
+             "(case-insensitive). Repeatable. Required unless --all-chats.",
+    ),
+    all_chats: bool = typer.Option(
+        False, "--all-chats",
+        help="Import EVERY chat. Deliberate opt-in — without it (and without "
+             "--chat) the command just lists your chats and writes nothing.",
     ),
     me_name: str = typer.Option(
         None, "--me", help="Your display name (default: 'Me')."
@@ -103,7 +109,10 @@ def whatsapp_live(
     ),
     no_media: bool = typer.Option(False, "--no-media", help="Skip attachments."),
     dry_run: bool = typer.Option(
-        False, "--dry-run", help="Count new messages; write nothing."
+        False, "--dry-run", help="Preview only; count new messages, write nothing."
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Skip the pre-import confirmation prompt."
     ),
     progress: bool = typer.Option(True, "--progress/--no-progress", help="Show the Rich progress tree."),
 ) -> None:
@@ -112,16 +121,23 @@ def whatsapp_live(
     Reads the plaintext SQLite the WhatsApp Desktop app keeps on disk —
     no network, no companion-device pairing, no account-ban risk. Re-runs
     only insert genuinely-new messages (dedup via source_ref). Schema
-    drift shipped by Meta is recorded to the drift_event table and a
-    fatal change aborts the import with nothing written — see
-    `msgviz drift`.
+    drift shipped by Meta is recorded and a fatal change aborts with
+    nothing written (see `msgviz drift`).
+
+    Selection is deliberate: with neither --chat nor --all-chats the
+    command lists your chats and exits without writing. Before any write
+    it previews the chats, message counts, and which NEW people would be
+    added to your archive, and asks for confirmation.
+
+    Anything imported can be fully removed later — DB rows and media
+    files on disk — with `msgviz delete chat <slug>`.
     """
     import sys as _sys
     from pathlib import Path as _Path
     _repo_root = _Path(__file__).resolve().parent.parent.parent
     if (_repo_root / "tools").is_dir() and str(_repo_root) not in _sys.path:
         _sys.path.insert(0, str(_repo_root))
-    from tools.import_whatsapp_live import import_live
+    from tools.import_whatsapp_live import import_live, preview_live
 
     from msgviz.core.progress import make_reporter
 
@@ -132,17 +148,108 @@ def whatsapp_live(
             "explicit ChatStorage.sqlite path."
         )
 
-    reporter = make_reporter("terminal" if progress else "null")
-    try:
-        stats = import_live(
-            device_slug=device,
-            db_path=str(db) if db else None,
-            me_name=me_name,
-            chat_filter=chat,
-            with_media=not no_media,
-            report_only=dry_run,
-            reporter=reporter,
+    chat_filters = list(chat) if chat else []
+    db_path = str(db) if db else None
+
+    # --- Guardrail: refuse to import without an explicit selection ---------
+    if not chat_filters and not all_chats:
+        try:
+            plan = preview_live(device_slug=device, db_path=db_path, me_name=me_name)
+        except SystemExit as e:
+            die(f"{e}")
+        console.print(
+            f"[bold]No chat selected.[/bold] {len(plan['chats'])} chat(s) "
+            f"available for device '{device}':\n"
         )
+        rows = sorted(plan["chats"], key=lambda c: c["new"], reverse=True)
+        for c in rows[:50]:
+            kind = "group" if c["is_group"] else "1:1"
+            console.print(
+                f"  [cyan]{c['title']}[/cyan] [dim]({kind})[/dim] — "
+                f"{c['new']} new of {c['total']} msgs  [dim]{c['slug']}[/dim]"
+            )
+        if len(rows) > 50:
+            console.print(f"  [dim]… and {len(rows) - 50} more[/dim]")
+        console.print(
+            "\nPick chats with [bold]--chat <text>[/bold] (repeatable), or "
+            "import everything with [bold]--all-chats[/bold]. "
+            "Nothing was written."
+        )
+        raise typer.Exit(code=0)
+
+    # --- Preview + confirm before writing ---------------------------------
+    # A single combined filter (substring OR across the given --chat values
+    # is approximated by previewing per filter); for the preview we show the
+    # union via the importer's single-filter preview per term.
+    def _run_preview(flt):
+        return preview_live(device_slug=device, db_path=db_path,
+                            me_name=me_name, chat_filter=flt)
+
+    try:
+        if all_chats:
+            plan = _run_preview(None)
+        else:
+            # Union of the per-filter previews (dedup chats by slug).
+            seen = {}
+            new_persons: set[str] = set()
+            warn = 0
+            for flt in chat_filters:
+                p = _run_preview(flt)
+                warn = max(warn, p["drift_warn"])
+                for c in p["chats"]:
+                    seen[c["slug"]] = c
+                new_persons.update(p["new_persons"])
+            plan = {
+                "chats": list(seen.values()),
+                "new_persons": sorted(new_persons),
+                "matched_persons": 0,
+                "drift_warn": warn,
+            }
+    except SystemExit as e:
+        die(f"{e}")
+
+    if not plan["chats"]:
+        die("No chats matched your selection. Nothing to import.")
+
+    total_new = sum(c["new"] for c in plan["chats"])
+    console.print(
+        f"[bold]About to import[/bold] {total_new} new message(s) across "
+        f"{len(plan['chats'])} chat(s):"
+    )
+    for c in sorted(plan["chats"], key=lambda c: c["new"], reverse=True)[:30]:
+        console.print(f"  [cyan]{c['title']}[/cyan] — {c['new']} new")
+    if plan["new_persons"]:
+        console.print(
+            f"\n[yellow]{len(plan['new_persons'])} new person(s)[/yellow] "
+            f"will be created in your archive:"
+        )
+        for name in plan["new_persons"][:20]:
+            console.print(f"  + {name}")
+        if len(plan["new_persons"]) > 20:
+            console.print(f"  … and {len(plan['new_persons']) - 20} more")
+
+    if dry_run:
+        console.print("\n[dim]Dry run — nothing written.[/dim]")
+        raise typer.Exit(code=0)
+
+    if not yes:
+        confirm_or_abort("\nProceed with the import?", default=False)
+
+    # --- Actual import (one pass; chat_filter=None when --all-chats) -------
+    reporter = make_reporter("terminal" if progress else "null")
+    agg = {"new": 0, "chats": 0, "media": 0, "skipped_existing": 0, "drift_warn": 0}
+    try:
+        filters = [None] if all_chats else chat_filters
+        for flt in filters:
+            stats = import_live(
+                device_slug=device, db_path=db_path, me_name=me_name,
+                chat_filter=flt, with_media=not no_media,
+                report_only=False, reporter=reporter,
+            )
+            agg["new"] += stats["new"]
+            agg["media"] += stats["media"]
+            agg["skipped_existing"] += stats["skipped_existing"]
+            agg["drift_warn"] = max(agg["drift_warn"], stats["drift_warn"])
     except SystemExit as e:
         die(f"{e}")
     except Exception as e:
@@ -150,17 +257,19 @@ def whatsapp_live(
     finally:
         reporter.close()
 
-    verb = "Would import" if dry_run else "Imported"
     console.print(
-        f"[green]{verb}:[/green] {stats['new']} new message(s) across "
-        f"{stats['chats']} chat(s) · {stats['media']} media · "
-        f"{stats['skipped_existing']} already present"
+        f"[green]Imported:[/green] {agg['new']} new message(s) · "
+        f"{agg['media']} media · {agg['skipped_existing']} already present"
     )
-    if stats["drift_warn"]:
+    if agg["drift_warn"]:
         console.print(
-            f"[yellow]⚠ {stats['drift_warn']} schema-drift warning(s)[/yellow] "
+            f"[yellow]⚠ {agg['drift_warn']} schema-drift warning(s)[/yellow] "
             f"— see [bold]msgviz drift[/bold]."
         )
+    console.print(
+        "[dim]Remove later with [bold]msgviz delete chat <slug>[/bold] "
+        "(DB + media files).[/dim]"
+    )
 
 
 @app.command("imessage")

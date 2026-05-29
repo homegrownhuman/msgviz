@@ -124,6 +124,32 @@ class PersonResolver:
         # 3) New person.
         return self._insert_person(key)
 
+    def would_match_name(self, name: str | None) -> Optional[int]:
+        """Non-mutating lookup: the existing person id a name WOULD
+        resolve to, or None if resolving it would create a new person.
+
+        Same matching as resolve_name() steps 1-2 (exact + alias) but
+        never inserts. Used by import previews to show, before any
+        write, which senders are new vs matched (person safety).
+        """
+        if not name:
+            return None
+        key = name.strip()
+        if key in self._by_name:
+            return self._by_name[key]
+        row = self.con.execute(
+            "SELECT id FROM person WHERE display_name=?", (key,)
+        ).fetchone()
+        if row:
+            return row[0]
+        nk = _norm_name(key)
+        if nk in self._by_alias_norm:
+            return self._by_alias_norm[nk]
+        row = self.con.execute(
+            "SELECT person_id FROM person_alias WHERE lower(value) = ?", (nk,)
+        ).fetchone()
+        return row[0] if row else None
+
     # --- Mutations -----------------------------------------------------------
     def add_alias(self, value: str, person_id: int) -> None:
         """Record an additional spelling for an existing person."""

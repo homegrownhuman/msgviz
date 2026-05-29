@@ -68,6 +68,124 @@ def _chat_db_slug(device_slug: str, source_id: str) -> str:
     return f"{device_slug}/chat_{source_id}"
 
 
+def preview_live(
+    device_slug: str,
+    db_path: Optional[str] = None,
+    me_name: Optional[str] = None,
+    chat_filter: Optional[str] = None,
+) -> dict:
+    """Inspect the WhatsApp DB and report what an import WOULD do —
+    without writing anything.
+
+    Returns a dict with:
+        * ``chats``: list of {slug, title, is_group, total, new}
+          (total messages in the source, and how many are not yet in
+          the archive),
+        * ``new_persons``: sorted list of sender names that would be
+          created as NEW person rows,
+        * ``matched_persons``: count of senders that map to existing
+          persons,
+        * ``drift_fatal`` / ``drift_warn`` counts from the probe.
+
+    Used by the CLI to (a) list chats when the user gave no selection,
+    and (b) show a person-safety preview before any write.
+    """
+    db = _db()
+    if not os.path.exists(db):
+        raise SystemExit("visualizer.db not found — run `msgviz init` first.")
+
+    con = sqlite3.connect(db)
+    con.row_factory = sqlite3.Row
+    drift.ensure_drift_event_table(con)
+
+    dev_row = con.execute(
+        "SELECT id, owner_person_id FROM device WHERE slug=?", (device_slug,)
+    ).fetchone()
+    if dev_row is None:
+        con.close()
+        raise SystemExit(f"device '{device_slug}' not found in the DB")
+
+    if me_name is None:
+        me_name = "Me"
+    resolver = PersonResolver(con)
+    src_tag = f"whatsapp_live:{device_slug}"
+
+    out = {
+        "chats": [], "new_persons": [], "matched_persons": 0,
+        "drift_fatal": 0, "drift_warn": 0,
+    }
+
+    # Read-only adapter pass; drift events are NOT persisted here (preview).
+    drift_seen = {"warn": 0, "fatal": 0}
+
+    def count_drift(event):
+        drift_seen[event.severity] = drift_seen.get(event.severity, 0) + 1
+
+    adapter = WhatsAppLiveAdapter(
+        device_slug=device_slug, db_path=db_path, me_name=me_name,
+        on_drift=count_drift,
+    )
+    try:
+        report = adapter.open()
+    except drift.SchemaDriftError as e:
+        con.close()
+        adapter.close()
+        out["drift_fatal"] = e.report.fatal_count
+        raise SystemExit(
+            f"WhatsApp schema drift (fatal) — cannot preview. "
+            f"Run `msgviz drift --explain whatsapp_live`. ({e})"
+        )
+    out["drift_warn"] = report.warn_count
+
+    all_chats = list(adapter.list_chats())
+    if chat_filter:
+        needle = chat_filter.lower()
+        chats = [
+            c for c in all_chats
+            if needle in (c.title or "").lower()
+            or needle in (c.subtitle or "").lower()
+        ]
+    else:
+        chats = all_chats
+
+    new_names: set[str] = set()
+    matched = 0
+    for chat in chats:
+        slug = chat.slug
+        crow = con.execute("SELECT id FROM chat WHERE slug=?", (slug,)).fetchone()
+        known: set[str] = set()
+        if crow is not None:
+            for r in con.execute(
+                """SELECT sr.external_id FROM source_ref sr
+                   JOIN message m ON m.id = sr.message_id
+                   WHERE m.chat_id = ? AND sr.source = ?""",
+                (crow["id"], src_tag),
+            ):
+                known.add(r["external_id"])
+        total = 0
+        new = 0
+        for cm in adapter.iter_messages(chat):
+            total += 1
+            ext = cm.external_id or ""
+            if ext not in known:
+                new += 1
+                if not cm.is_me and cm.sender_raw:
+                    if resolver.would_match_name(cm.sender_raw) is None:
+                        new_names.add(cm.sender_raw)
+                    else:
+                        matched += 1
+        out["chats"].append({
+            "slug": slug, "title": chat.title, "is_group": chat.is_group,
+            "total": total, "new": new,
+        })
+
+    out["new_persons"] = sorted(new_names)
+    out["matched_persons"] = matched
+    con.close()
+    adapter.close()
+    return out
+
+
 def import_live(
     device_slug: str,
     db_path: Optional[str] = None,
