@@ -7,20 +7,34 @@ Used by IMessageLiveAdapter (live Mac DB) and IMessageBackupAdapter
 (frozen snapshot). Translates the raw Apple data into CanonicalMessage
 objects and parses the Apple-specific quirks (attributedBody, tapbacks,
 edit history, balloon apps).
+
+:func:`iter_canonical` wraps every message row in
+:func:`~msgviz.core.drift.safe_canonicalize`, so a single unparseable
+row (corrupt attributedBody, broken edit-summary plist, …) becomes a
+``row_parse_failed`` warn drift event and is skipped — never a bare
+``except: pass``, and never a crash that aborts the whole chat. The
+caller passes the ``source`` tag (``imessage_live`` / ``imessage_backup``)
+and an ``on_drift`` sink; this module never touches the msgviz DB itself.
 """
 from __future__ import annotations
 
 import datetime
 import plistlib
 import sqlite3
-from typing import Iterator, Optional
+from typing import Callable, Iterator, Optional
 
+from msgviz.core import drift
 from msgviz.core.canonical import (
     CanonicalMessage, Attachment, Edit, Reaction,
 )
 
 
 APPLE_EPOCH = 978307200
+
+
+# A no-op drift sink for callers that don't supply one (tests, dry probes).
+def _ignore_drift(_event: drift.DriftEvent) -> None:  # pragma: no cover
+    pass
 
 # Tapback type -> (emoji, label). 2000-2005 = added, 3000-3005 = removed.
 TAPBACKS = {
@@ -195,18 +209,114 @@ def get_attachments(con: sqlite3.Connection, message_rowid: int) -> list:
 
 
 # ---------------------------------------------------------------------------
+# Row → CanonicalMessage
+# ---------------------------------------------------------------------------
+def _build_canonical(
+    con: sqlite3.Connection,
+    m: sqlite3.Row,
+    *,
+    me_name: str,
+    guid_to_reactions: dict[str, dict[int, Reaction]],
+) -> Optional[CanonicalMessage]:
+    """Translate one Apple `message` row into a CanonicalMessage.
+
+    Raises on genuinely-unexpected shapes (a malformed attributedBody
+    blob, a corrupt edit-summary plist, etc.) so the caller's
+    :func:`safe_canonicalize` wrapper records a ``row_parse_failed``
+    drift event and skips the row instead of aborting the chat. Returns
+    None for rows we intentionally skip (tapbacks — folded into
+    reactions already — and pure system events with no displayable
+    content).
+    """
+    amt = m["associated_message_type"] or 0
+    if amt in TAPBACKS or 3000 <= amt <= 3005:
+        return None
+    text = clean_text(m["text"])
+    if not text and amt == 0:
+        text = decode_attributed_body(m["attributedBody"])
+    has_att = bool(m["cache_has_attachments"])
+
+    apps: list[str] = []
+    if not text and not has_att and m["balloon_bundle_id"]:
+        lbl = balloon_label(m["balloon_bundle_id"])
+        if lbl:
+            apps.append(lbl)
+
+    if amt != 0 and not text and not has_att and not apps:
+        return None
+    if not text and not has_att and not apps:
+        return None
+
+    dt = apple_dt(m["date"])
+    if dt is None:
+        return None
+    ts = int(dt.timestamp())
+    is_me = bool(m["is_from_me"])
+
+    attachments: list[Attachment] = []
+    if has_att:
+        for a in get_attachments(con, m["rowid"]):
+            if is_plugin_payload(a["transfer_name"]):
+                continue
+            attachments.append(Attachment(
+                source_ref=a["filename"] or "",
+                mime=a["mime_type"] or "",
+                filename=a["transfer_name"] or "",
+                is_sticker=bool(a["is_sticker"]),
+                emoji_desc=a["emoji_desc"] or "",
+            ))
+
+    edits = extract_edit_history(m["message_summary_info"], text)
+    reactions = list(guid_to_reactions.get(m["guid"], {}).values()) if m["guid"] else []
+    retracted = bool(m["date_retracted"])
+
+    return CanonicalMessage(
+        external_id=str(m["rowid"]),
+        ts=ts,
+        sender_raw=(me_name if is_me else (m["sender_handle"] or "")),
+        is_me=is_me,
+        text=text or None,
+        retracted=retracted,
+        edits=edits,
+        reactions=reactions,
+        apps=apps,
+        attachments=attachments,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Generic iterator: Apple raw data → CanonicalMessages
 # ---------------------------------------------------------------------------
-def iter_canonical(con: sqlite3.Connection, chat_rowid: int,
-                   me_name: str) -> Iterator[CanonicalMessage]:
+def iter_canonical(
+    con: sqlite3.Connection,
+    chat_rowid: int,
+    me_name: str,
+    *,
+    source: str = "imessage_live",
+    on_drift: Optional[Callable[[drift.DriftEvent], None]] = None,
+) -> Iterator[CanonicalMessage]:
     """Read one chat from the given Apple DB connection and yield
     CanonicalMessage objects. Tapbacks and tapback removes are attached
     as reactions to the respective target message — not emitted as their
     own rows.
 
-    `me_name` is written into `sender_raw` as the unified marker for
-    is_me=True (person resolution happens in the writer via PersonResolver).
+    Every message row goes through :func:`safe_canonicalize`, so a single
+    malformed row (a corrupt attributedBody blob, a broken edit-summary
+    plist, …) becomes a ``row_parse_failed`` warn event and is skipped
+    rather than blowing up the whole chat — mirroring the WhatsApp path.
+
+    Args:
+        con: open read-only connection to the Apple chat.db.
+        chat_rowid: chat.ROWID of the chat to read.
+        me_name: written into `sender_raw` as the unified marker for
+            is_me=True (person resolution happens in the writer via
+            PersonResolver).
+        source: drift `source` tag — ``"imessage_live"`` or
+            ``"imessage_backup"`` — the caller passes which DB this is.
+        on_drift: sink for drift events; defaults to a no-op. The adapter
+            passes its `self._on_drift`.
     """
+    sink = on_drift or _ignore_drift
     rows = get_messages(con, chat_rowid)
 
     # Tapback detection needs two passes: first collect every tapback,
@@ -235,62 +345,23 @@ def iter_canonical(con: sqlite3.Connection, chat_rowid: int,
             if tg and tg in guid_to_reactions:
                 guid_to_reactions[tg].pop(amt - 1000, None)
 
-    # Zweiter Pass: echte Nachrichten ausgeben.
+    # Zweiter Pass: echte Nachrichten ausgeben. Jede Zeile durch den
+    # safe_canonicalize-Schutz, damit eine kaputte Zeile zu einem
+    # row_parse_failed-Drift-Event wird statt den ganzen Chat zu killen.
     for m in rows:
-        amt = m["associated_message_type"] or 0
-        if amt in TAPBACKS or 3000 <= amt <= 3005:
-            continue
-        text = clean_text(m["text"])
-        if not text and amt == 0:
-            text = decode_attributed_body(m["attributedBody"])
-        has_att = bool(m["cache_has_attachments"])
-
-        apps: list[str] = []
-        if not text and not has_att and m["balloon_bundle_id"]:
-            lbl = balloon_label(m["balloon_bundle_id"])
-            if lbl:
-                apps.append(lbl)
-
-        if amt != 0 and not text and not has_att and not apps:
-            continue
-        if not text and not has_att and not apps:
-            continue
-
-        dt = apple_dt(m["date"])
-        if dt is None:
-            continue
-        ts = int(dt.timestamp())
-        is_me = bool(m["is_from_me"])
-
-        attachments: list[Attachment] = []
-        if has_att:
-            for a in get_attachments(con, m["rowid"]):
-                if is_plugin_payload(a["transfer_name"]):
-                    continue
-                attachments.append(Attachment(
-                    source_ref=a["filename"] or "",
-                    mime=a["mime_type"] or "",
-                    filename=a["transfer_name"] or "",
-                    is_sticker=bool(a["is_sticker"]),
-                    emoji_desc=a["emoji_desc"] or "",
-                ))
-
-        edits = extract_edit_history(m["message_summary_info"], text)
-        reactions = list(guid_to_reactions.get(m["guid"], {}).values()) if m["guid"] else []
-        retracted = bool(m["date_retracted"])
-
-        yield CanonicalMessage(
-            external_id=str(m["rowid"]),
-            ts=ts,
-            sender_raw=(me_name if is_me else (m["sender_handle"] or "")),
-            is_me=is_me,
-            text=text or None,
-            retracted=retracted,
-            edits=edits,
-            reactions=reactions,
-            apps=apps,
-            attachments=attachments,
+        msg = drift.safe_canonicalize(
+            lambda r: _build_canonical(
+                con, r,
+                me_name=me_name,
+                guid_to_reactions=guid_to_reactions,
+            ),
+            m,
+            source=source,
+            table="message",
+            on_drift=sink,
         )
+        if msg is not None:
+            yield msg
 
 
 def list_chats_from_db(con: sqlite3.Connection) -> list[dict]:

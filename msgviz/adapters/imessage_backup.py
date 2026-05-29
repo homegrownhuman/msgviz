@@ -105,7 +105,10 @@ class IMessageBackupAdapter:
     def iter_messages(self, chat: ChatSpec) -> Iterator[CanonicalMessage]:
         con = self._open()
         chat_rowid = int(chat.source_id)
-        yield from imessage_db.iter_canonical(con, chat_rowid, self.me_name)
+        yield from imessage_db.iter_canonical(
+            con, chat_rowid, self.me_name,
+            source=self.name, on_drift=self._on_drift,
+        )
 
     def resolve_attachment(self, source_ref: str) -> Optional[Path]:
         if not source_ref:
