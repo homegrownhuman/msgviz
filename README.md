@@ -88,7 +88,7 @@ or the voice-notes browser (click a thumbnail for the full view):
 
 <p align="center">
   <a href="docs/screenshots/page-chat.png"><img src="docs/screenshots/page-chat.png" width="32%" alt="Chat page with messages, voice notes, and side heatmap"></a>
-  <a href="docs/screenshots/page-media.png"><img src="docs/screenshots/page-media.png" width="32%" alt="Media overview grid with photo thumbnails"></a>
+  <a href="docs/screenshots/page-media.jpg"><img src="docs/screenshots/page-media.jpg" width="32%" alt="Media overview grid with photo thumbnails"></a>
   <a href="docs/screenshots/page-voice.png"><img src="docs/screenshots/page-voice.png" width="32%" alt="Voice notes browser with inline playback"></a>
 </p>
 <p align="center"><sub>Chat + heatmap &nbsp;·&nbsp; Media overview &nbsp;·&nbsp; Voice notes</sub></p>
