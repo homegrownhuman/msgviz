@@ -142,8 +142,33 @@ no state sharing.
 
 ### 5. Reverse proxy with path rewrite
 
-If your reverse proxy (nginx, Caddy) already strips the prefix, msgviz
-runs at `/`:
+If your reverse proxy (nginx, Caddy) already strips the prefix, run
+the backend with `--root-path /messages` so it knows to put the
+prefix back into the URLs it emits in HTML.
+
+**Caddy:**
+
+```caddyfile
+example.com {
+    # Sub-mount: strip /messages/ before proxying, the backend was
+    # told the prefix via --root-path /messages and re-emits it
+    # in every asset URL it generates.
+    handle_path /messages/* {
+        reverse_proxy 127.0.0.1:8753
+    }
+
+    # … other routes here …
+}
+```
+
+Start the backend with the matching root-path:
+
+```bash
+msgviz serve --host 127.0.0.1 --port 8753 --root-path /messages
+```
+
+**nginx:** the equivalent pattern — `proxy_pass` with a trailing slash
+strips the prefix:
 
 ```nginx
 location /messages/ {
@@ -151,10 +176,32 @@ location /messages/ {
 }
 ```
 
-In that case the frontend needs a hint that it's actually under
-`/messages/`. Set `MSGVIZ_BASE` as env or via custom HTML.
-*(Out-of-the-box not implemented yet — msgviz currently relies on
-Starlette's `root_path`.)*
+Internally, `--root-path` is forwarded to uvicorn's ASGI `root_path`,
+which the template renderer reads as `request.scope['root_path']` and
+substitutes into every `{{base}}` in the HTML.
+
+### Worked example: two msgviz instances on one hostname
+
+A common local-dev setup: live archive at the root, demo dataset
+under `/dev/`. Two uvicorn processes, two `MSGVIZ_HOME` values, one
+Caddy block:
+
+```caddyfile
+messages.example.com {
+    handle_path /dev/* {
+        reverse_proxy 127.0.0.1:8754   # demo: MSGVIZ_HOME=demo --root-path /dev
+    }
+    reverse_proxy 127.0.0.1:8753       # live: MSGVIZ_HOME=data  (no root-path)
+}
+```
+
+```bash
+# live archive at the root
+msgviz serve --host 127.0.0.1 --port 8753
+
+# demo dataset under /dev/
+MSGVIZ_HOME=demo msgviz serve --host 127.0.0.1 --port 8754 --root-path /dev
+```
 
 ---
 
