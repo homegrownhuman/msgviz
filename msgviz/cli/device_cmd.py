@@ -68,12 +68,13 @@ def remove(
     yes: bool = typer.Option(False, "--yes", "-y", help="No confirmation prompt."),
     no_backup: bool = typer.Option(False, "--no-backup", help="Skip the safety copy."),
 ) -> None:
-    """Remove a device WITH all its chats and messages."""
-    if not no_backup:
-        from msgviz.core.backup import backup_db
-        bk = backup_db(f"remove-device-{slug}")
-        if bk is not None:
-            console.print(f"[dim]Backup -> {bk}[/dim]")
+    """Remove a device WITH all its chats, messages, and media files.
+
+    Media files are deleted from disk too (content-addressed: files
+    shared with chats on *other* devices are kept).
+    """
+    from msgviz.core import purge as purge_mod
+
     with open_db() as con:
         row = con.execute(
             """SELECT d.id,
@@ -87,16 +88,27 @@ def remove(
         if row is None:
             die(f"Device '{slug}' not found.")
         did, n_chats, n_msgs = row[0], row[1], row[2]
+
+        preview = purge_mod.purge_device(con, did, dry_run=True)
         if not yes:
             confirm_or_abort(
-                f"Delete device '{slug}' including {n_chats} chats and {n_msgs} messages. Continue?"
+                f"Delete device '{slug}': {n_chats} chats, {n_msgs} messages, "
+                f"{preview.files_deleted} media file(s) from disk "
+                f"({preview.bytes_freed // 1024} KB), "
+                f"{preview.files_kept_shared} shared file(s) kept. Continue?"
             )
-        con.execute(
-            """DELETE FROM message
-               WHERE chat_id IN (SELECT id FROM chat WHERE device_id = ?)""",
-            (did,),
-        )
-        con.execute("DELETE FROM chat WHERE device_id = ?", (did,))
-        con.execute("DELETE FROM device WHERE id = ?", (did,))
-        con.commit()
-    console.print(f"[green]Device '{slug}' and all its data deleted.[/green]")
+
+        if not no_backup:
+            from msgviz.core.backup import backup_db
+            bk = backup_db(f"remove-device-{slug}")
+            if bk is not None:
+                console.print(f"[dim]Backup -> {bk}[/dim]")
+
+        stats = purge_mod.purge_device(con, did)
+    console.print(
+        f"[green]Device '{slug}' deleted:[/green] {stats.chats} chats, "
+        f"{stats.messages} messages, {stats.files_deleted} media file(s) "
+        f"removed from disk ({stats.bytes_freed // 1024} KB freed)."
+    )
+    if stats.errors:
+        console.print(f"[yellow]{len(stats.errors)} file error(s).[/yellow]")
