@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# DB + WAL + Backups (live archive)
+data/visualizer.db
+data/visualizer.db-wal
+data/visualizer.db-shm
+data/db-backups/
+
+# SQLite WAL artifacts in the demo / dev sandboxes — the .db itself is
+# committed, but the -wal / -shm sidecars are transient lock state.
+demo/data/visualizer.db-wal
+demo/data/visualizer.db-shm
+dev/data/visualizer.db-wal
+dev/data/visualizer.db-shm
+
+# Medien (groß, regenerierbar)
+media/
+originals/
+# Altpfade vor Schritt 1b (sollten nicht mehr existieren, defensiv ignorieren)
+media_v2/
+media_v2_orig/
+
+# Generierte Daten (Transkripte, OCR, Chat-Exporte, Analyse) — regenerierbar
+data/transcripts.json
+data/transcripts.json.bak*
+data/ocr.json
+data/index.json
+data/chats/
+data/analysis/
+data/recovery/
+data/imports/
+
+# Generierte Web-Assets
+recovery/
+
+# Legacy / Backup-Verzeichnisse außerhalb des Refactor-Scopes
+_legacy/
+backups/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Privates
+config/secrets.json
+# Persönliche Konfiguration (echte Namen/Nummern/Emails — gehört nicht in
+# ein öffentliches Repo). Wer das Tool nutzt, kopiert sich
+# config/sources.example.json -> config/sources.json und passt es an.
+config/sources.json
+# Persönliche Claude-Konfiguration (Agent-Defs, Launch-Configs).
+.claude/
+
+# Lokales Caddy-Reverse-Proxy-Setup mit persönlichen Hostnames.
+Caddyfile
+
+# Internes Planungs-Dokument, gehört nicht in das öffentliche Repo.
+docs/GITHUB_RELEASE_PLAN.md
+
+# Interne Build-Tools für das Demo-Datenset. Der Output (demo/) wird
+# committet; die Generatoren sind privat (nutzen externe APIs,
+# experimentell, ändern sich häufig).
+scripts/fetch_demo_assets.py
+scripts/seed_demo.py
+
+# Lokale Developer-Sandbox. Nicht ins Public-Repo. Wer am Code arbeitet
+# nutzt MSGVIZ_HOME=$(pwd)/dev als isolierte Spielwiese.
+dev/
+
+# Lokaler Launcher (doppelklickbares .command für Christian's Setup —
+# hartcodierte Pfade, gehört nicht ins öffentliche Repo).
+Start_Message_Visualizer.command
+
+# Defensive: alte Git-Backups (z.B. .git.pre-public-backup/) dürfen NIE
+# wieder ins Repo. Das echte .git/ wird ohnehin von Git selbst ignoriert.
+.git.pre-public-backup/
+.git.bak/
+.git-backup*/
+
+# Build/Packaging-Artefakte
+build/
+dist/
+*.egg
+.eggs/

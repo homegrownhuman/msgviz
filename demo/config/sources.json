@@ -1,0 +1,5 @@
+{
+  "_comment": "msgviz configuration. devices = devices/sources, people = handle->name mapping.",
+  "devices": [],
+  "people": {}
+}

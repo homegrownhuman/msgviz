@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 340" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif">
+  <!--
+    Media pipeline: how attachments get from their source onto disk in
+    the content-addressable layout the API serves.
+  -->
+
+  <style>
+    .label   { font-size: 11px; font-weight: 600; fill: #7e8aa6; letter-spacing: 1.5px; }
+    .src     { fill: #1a3a5c; stroke: #4e9eef; stroke-width: 1.5; }
+    .src-tx  { fill: #e8f3ff; }
+    .work    { fill: #3a2a4a; stroke: #b97df0; stroke-width: 1.5; }
+    .work-tx { fill: #f3e8ff; }
+    .calc    { fill: #2a3a2a; stroke: #6cc070; stroke-width: 1.5; }
+    .calc-tx { fill: #e6f5e6; }
+    .store   { fill: #4a3a1a; stroke: #f0b050; stroke-width: 1.5; }
+    .store-tx { fill: #fff3dc; }
+    .db      { fill: #4a1a3a; stroke: #f06080; stroke-width: 1.5; }
+    .db-tx   { fill: #ffe0eb; }
+    .title   { font-size: 13.5px; font-weight: 600; }
+    .sub     { font-size: 10.5px; opacity: 0.78; }
+    .mono    { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 10.5px; }
+    .arrow   { fill: none; stroke: #7e8aa6; stroke-width: 1.4; marker-end: url(#arrow); }
+    .annot   { font-size: 10.5px; fill: #7e8aa6; font-style: italic; }
+    .caption { font-size: 10.5px; fill: #7e8aa6; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7e8aa6"/>
+    </marker>
+  </defs>
+
+  <text class="label" x="20" y="30">MEDIA PIPELINE — content-addressable layout, automatic dedup</text>
+
+  <!-- 1. source -->
+  <rect class="src" x="20" y="60" width="170" height="100" rx="6"/>
+  <text class="title src-tx" x="36" y="86">Source file</text>
+  <text class="sub src-tx" x="36" y="106">~/Library/.../Attachments/</text>
+  <text class="sub src-tx" x="36" y="121">IMG_2371.HEIC</text>
+  <text class="sub src-tx" x="36" y="136">OR WhatsApp media/PHOTO.jpg</text>
+  <text class="sub src-tx" x="36" y="151">OR Apple chat.db blob</text>
+
+  <!-- 2. hash -->
+  <rect class="calc" x="240" y="60" width="180" height="100" rx="6"/>
+  <text class="title calc-tx" x="256" y="86">SHA-256 hash</text>
+  <text class="sub calc-tx" x="256" y="106">read source bytes</text>
+  <text class="sub calc-tx" x="256" y="121">first 16 hex chars =</text>
+  <text class="mono calc-tx" x="256" y="138">78b575cd78bf518f</text>
+  <text class="sub calc-tx" x="256" y="153">prefix = first 2 chars</text>
+
+  <!-- 3. convert (Pillow / ffmpeg) -->
+  <rect class="work" x="470" y="60" width="180" height="100" rx="6"/>
+  <text class="title work-tx" x="486" y="86">Convert</text>
+  <text class="sub work-tx" x="486" y="106">HEIC → JPEG (Pillow)</text>
+  <text class="sub work-tx" x="486" y="121">m4a → web .m4a (ffmpeg)</text>
+  <text class="sub work-tx" x="486" y="136">resize thumbnails</text>
+  <text class="sub work-tx" x="486" y="151">EXIF strip</text>
+
+  <!-- 4. write to disk -->
+  <rect class="store" x="700" y="60" width="260" height="100" rx="6"/>
+  <text class="title store-tx" x="716" y="86">media/ on disk</text>
+  <text class="mono store-tx" x="716" y="108">media/image/78/</text>
+  <text class="mono store-tx" x="716" y="124">  78b575cd78bf518f.jpg</text>
+  <text class="sub store-tx" x="716" y="142">prefix dir = first 2 hex chars</text>
+  <text class="sub store-tx" x="716" y="156">(spreads files across 256 dirs)</text>
+
+  <!-- 5. DB row -->
+  <rect class="db" x="240" y="220" width="500" height="100" rx="6"/>
+  <text class="title db-tx" x="256" y="246">media table row</text>
+  <text class="mono db-tx" x="256" y="268">id=… message_id=… kind='image'</text>
+  <text class="mono db-tx" x="256" y="284">src='media/image/78/78b575cd78bf518f.jpg'</text>
+  <text class="mono db-tx" x="256" y="300">content_hash='78b575cd78bf518f'  bytes=126202</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M 190 110 L 240 110"/>
+  <text class="annot" x="195" y="102">read</text>
+
+  <path class="arrow" d="M 420 110 L 470 110"/>
+  <text class="annot" x="427" y="102">normalize</text>
+
+  <path class="arrow" d="M 650 110 L 700 110"/>
+  <text class="annot" x="657" y="102">write</text>
+
+  <!-- All paths feed the DB row -->
+  <path class="arrow" d="M 330 160 L 380 220"/>
+  <path class="arrow" d="M 540 160 L 530 220"/>
+  <path class="arrow" d="M 800 160 L 660 220"/>
+
+  <!-- Dedup callout -->
+  <rect x="20" y="220" width="200" height="100" rx="6"
+        fill="rgba(120,140,180,0.06)" stroke="rgba(120,140,180,0.4)" stroke-dasharray="4 3"/>
+  <text class="title" fill="#e8e8f0" x="36" y="246">Dedup</text>
+  <text class="sub" fill="#a0a4b0" x="36" y="266">Before writing: check if</text>
+  <text class="sub" fill="#a0a4b0" x="36" y="280">media.content_hash already</text>
+  <text class="sub" fill="#a0a4b0" x="36" y="294">exists. If yes — reuse the file,</text>
+  <text class="sub" fill="#a0a4b0" x="36" y="308">just point a new row at it.</text>
+
+  <path class="arrow" d="M 220 270 L 240 270"/>
+</svg>

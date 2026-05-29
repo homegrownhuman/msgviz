@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Message Visualizer favicon.
+  Black circle + bold white "V" on a transparent background.
+  Designed at 64×64 viewBox; scales without aliasing because everything
+  is geometry, no rasterization until the browser renders it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="31" fill="black"/>
+  <!--
+    Bold V as a single filled path. Outer V goes (8,10)→(32,54)→(56,10),
+    inner cut-out goes (32,40)→(20,10)→(44,10). Each stroke ~12 units
+    thick at the top edge; the inside narrows toward the apex like a
+    real condensed-bold V. Result fills ~75% of the circle's width.
+  -->
+  <path d="M 8 10 L 20 10 L 32 40 L 44 10 L 56 10 L 32 54 Z"
+        fill="white"/>
+</svg>

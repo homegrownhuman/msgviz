@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# msgviz demo — run msgviz against the bundled demo dataset (demo/).
+#
+# Usage:
+#   ./scripts/msgviz-demo <subcommand> [args]
+#   ./scripts/msgviz-demo status
+#   ./scripts/msgviz-demo serve
+#
+# All paths (DB, media, config) live under demo/ — the production data
+# under data/ and the dev sandbox under dev/ are untouched.
+
+cd "$(dirname "$0")/.." || exit 1
+
+if [ ! -f demo/data/visualizer.db ]; then
+    echo "demo/data/visualizer.db not present. The demo dataset is included"
+    echo "in the published repository; if you cloned and don't see it, run:"
+    echo "  git lfs pull   # if the repo uses LFS"
+    echo "or pull a fresh clone."
+    exit 1
+fi
+
+export MSGVIZ_HOME="$(pwd)/demo"
+
+if [ -x .venv/bin/msgviz ]; then
+    exec .venv/bin/msgviz "$@"
+else
+    exec python -m msgviz "$@"
+fi

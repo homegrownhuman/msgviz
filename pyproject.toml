@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "msgviz"
+version = "0.1.0.dev0"
+description = "Local, source-agnostic chat archive visualizer (iMessage, WhatsApp & more) with heatmap, search, audio transcription and OCR — fully offline."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "msgviz contributors" },
+]
+keywords = [
+    "imessage", "whatsapp", "chat-archive", "visualization",
+    "fastapi", "whisper", "ocr", "local-first", "privacy",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Chat",
+    "Topic :: Multimedia",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "rich>=13",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+ocr-tesseract = [
+    "pytesseract>=0.3.10",
+    "Pillow>=10",
+]
+dev = [
+    "pytest>=8",
+    "ruff>=0.4",
+    "httpx>=0.27",   # for fastapi.testclient.TestClient
+    "Pillow>=10",    # for scripts/fetch_demo_assets.py + scripts/seed_demo.py
+]
+
+[project.scripts]
+msgviz = "msgviz.cli:app"
+
+[project.urls]
+# Werden gesetzt sobald das Repo öffentlich ist (Phase D).
+# Homepage = "https://github.com/<user>/msgviz"
+# Issues   = "https://github.com/<user>/msgviz/issues"
+
+# ---------------------------------------------------------------------------
+# setuptools — Layout
+# ---------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["msgviz*"]
+exclude = ["tests*", "tools*", "_legacy*"]
+
+[tool.setuptools.package-data]
+msgviz = ["core/schema.sql"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+# ---------------------------------------------------------------------------
+# ruff (Linter — kommt mit Phase 0 ins Setup, vorerst minimal)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py310"

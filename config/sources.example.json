@@ -1,0 +1,110 @@
+{
+  "_comment": "Beispiel-Konfiguration. Kopiere diese Datei nach 'config/sources.json' und passe die Daten an.",
+  "_chat_format": "Objekt: { slug, title, subtitle, is_group, origin, source?, source_id? }. source = Adapter-Name (z.B. 'imessage_live'), source_id = adapter-eigene ID.",
+  "_types": "type = technische Quelle: ios_backup | iphone_backup (backup = Ordner in MobileSync oder absolut) | mac_live (db = optional, Default ~/Library/Messages/chat.db) | static",
+  "_origins": "origin = Messaging-Dienst (für Logo): apple (iMessage) | whatsapp | signal | sms (Android/SMS) | telegram. Default: apple",
+  "_personen": "Persönliche Daten (echte Telefonnummern, Mails, Namen) gehören NICHT in diese Beispieldatei. Sie werden über `msgviz person add` direkt in die DB geschrieben.",
+  "devices": [
+    {
+      "type": "mac_live",
+      "id": "mac-alice",
+      "slug": "mac_alice",
+      "name": "MacBook Pro",
+      "me_name": "Alice",
+      "db": null,
+      "chats": [
+        {
+          "slug": "bob",
+          "title": "Bob",
+          "subtitle": "+49 170 2345678 · iMessage",
+          "is_group": false,
+          "origin": "apple",
+          "source": "imessage_live",
+          "source_id": "2"
+        },
+        {
+          "slug": "carol",
+          "title": "Carol",
+          "subtitle": "+49 170 3456789 · iMessage",
+          "is_group": false,
+          "origin": "apple",
+          "source": "imessage_live",
+          "source_id": "10"
+        },
+        {
+          "slug": "wa_dave",
+          "title": "Dave",
+          "subtitle": "WhatsApp-Export · seit 2016",
+          "is_group": false,
+          "origin": "whatsapp"
+        }
+      ]
+    },
+    {
+      "type": "ios_backup",
+      "id": "00008030-0014581A3644202E",
+      "slug": "ipad_carol",
+      "name": "iPad",
+      "me_name": "Carol",
+      "backup": "00008030-0014581A3644202E",
+      "chats": [
+        {
+          "slug": "bob",
+          "title": "Bob",
+          "subtitle": "+49 170 2345678 · iMessage",
+          "is_group": false,
+          "origin": "apple",
+          "source": "imessage_live",
+          "source_id": "1"
+        },
+        {
+          "slug": "alice",
+          "title": "Alice",
+          "subtitle": "+49 170 1234567 · iMessage",
+          "is_group": false,
+          "origin": "apple",
+          "source": "imessage_live",
+          "source_id": "3"
+        },
+        {
+          "slug": "group_alice_bob",
+          "title": "Gruppe: Alice & Bob",
+          "subtitle": "Gruppenchat · iMessage",
+          "is_group": true,
+          "origin": "apple",
+          "source": "imessage_live",
+          "source_id": "10"
+        }
+      ]
+    },
+    {
+      "type": "static",
+      "slug": "iphone_bob",
+      "name": "iPhone 8",
+      "me_name": "Bob",
+      "chats": [
+        {
+          "slug": "wa_dave",
+          "title": "Dave",
+          "subtitle": "WhatsApp-Export · Apr 2014 – Aug 2019",
+          "is_group": false,
+          "origin": "whatsapp"
+        },
+        {
+          "slug": "wa_grace",
+          "title": "Grace",
+          "subtitle": "WhatsApp-Export · Mär 2019 – Apr 2019",
+          "is_group": false,
+          "origin": "whatsapp"
+        },
+        {
+          "slug": "wa_eve",
+          "title": "Eve",
+          "subtitle": "WhatsApp-Export · Dez 2014 – Nov 2019",
+          "is_group": false,
+          "origin": "whatsapp"
+        }
+      ]
+    }
+  ]
+}

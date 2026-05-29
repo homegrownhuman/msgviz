@@ -1,0 +1,10 @@
+[10.05.18, 12:30:00] Owner: Hey, are you there?
+[10.05.18, 12:30:15] Testperson: Yes, what's up?
+[10.05.18, 12:30:45] Owner: Look at this photo ‎<attached: 00000001-PHOTO-2018-05-10-12-30-45.jpg>
+[10.05.18, 12:31:00] Testperson: ‎<attached: 00000002-AUDIO-2018-05-10-12-31-00.opus>
+[10.05.18, 12:31:30] Owner: Cool, thanks for the voice note!
+[10.05.18, 12:32:00] Testperson: Anytime.
+[10.05.18, 12:33:10] Owner: Wanted to say something but never mind
+[10.05.18, 12:33:45] Owner: This message was deleted.
+[10.05.18, 12:35:00] Testperson: Talk soon!
+[10.05.18, 12:35:30] Owner: Bye

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 480" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif">
+  <!--
+    Message Visualizer — end-to-end data pipeline.
+    Hand-rolled SVG. Designed for GitHub Markdown (no scripts, no
+    external font @imports; falls back to system sans-serif).
+    Palette: muted dark theme that works on white and dark backgrounds.
+  -->
+
+  <style>
+    .layer-bg { fill: rgba(120,140,180,0.06); stroke: rgba(120,140,180,0.25); }
+    .layer-label { font-size: 11px; font-weight: 600; fill: #7e8aa6; letter-spacing: 1.5px; }
+    .source       { fill: #1a3a5c; stroke: #4e9eef; stroke-width: 1.5; }
+    .source-text  { fill: #e8f3ff; }
+    .adapter      { fill: #3a2a4a; stroke: #b97df0; stroke-width: 1.5; }
+    .adapter-text { fill: #f3e8ff; }
+    .canon        { fill: #2a3a2a; stroke: #6cc070; stroke-width: 1.5; }
+    .canon-text   { fill: #e6f5e6; }
+    .store        { fill: #4a3a1a; stroke: #f0b050; stroke-width: 1.5; }
+    .store-text   { fill: #fff3dc; }
+    .api          { fill: #1a4a4a; stroke: #5cd0d0; stroke-width: 1.5; }
+    .api-text     { fill: #e0fafa; }
+    .ui           { fill: #3a1a2a; stroke: #f06080; stroke-width: 1.5; }
+    .ui-text      { fill: #ffe0eb; }
+    .title        { font-size: 14px; font-weight: 600; }
+    .sub          { font-size: 10.5px; opacity: 0.78; }
+    .arrow        { fill: none; stroke: #7e8aa6; stroke-width: 1.4; marker-end: url(#arrow); }
+    .arrow-dashed { fill: none; stroke: #7e8aa6; stroke-width: 1.4; stroke-dasharray: 4 3; marker-end: url(#arrow); }
+    .caption      { font-size: 10.5px; fill: #7e8aa6; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7e8aa6"/>
+    </marker>
+  </defs>
+
+  <!-- ─────────────────────────────── LAYER 1: SOURCES ────────────────────── -->
+  <rect class="layer-bg" x="20" y="20" width="220" height="500" rx="8"/>
+  <text class="layer-label" x="40" y="44">SOURCES</text>
+
+  <!-- iMessage live -->
+  <rect class="source" x="40" y="70" width="180" height="60" rx="6"/>
+  <text class="title source-text" x="56" y="93">~/Library/Messages</text>
+  <text class="sub source-text" x="56" y="110">chat.db (macOS)</text>
+  <text class="sub source-text" x="56" y="124">live, incremental</text>
+
+  <!-- iMessage backup -->
+  <rect class="source" x="40" y="160" width="180" height="60" rx="6"/>
+  <text class="title source-text" x="56" y="183">iMessage backup</text>
+  <text class="sub source-text" x="56" y="200">chat.db snapshot</text>
+  <text class="sub source-text" x="56" y="214">read-once</text>
+
+  <!-- WhatsApp export -->
+  <rect class="source" x="40" y="250" width="180" height="60" rx="6"/>
+  <text class="title source-text" x="56" y="273">WhatsApp export</text>
+  <text class="sub source-text" x="56" y="290">_chat.txt + media/</text>
+  <text class="sub source-text" x="56" y="304">iOS or Android format</text>
+
+  <!-- Future / extensible -->
+  <rect class="source" x="40" y="340" width="180" height="60" rx="6"
+        fill-opacity="0.5" stroke-dasharray="4 3"/>
+  <text class="title source-text" x="56" y="363" opacity="0.7">Signal · Telegram</text>
+  <text class="sub source-text" x="56" y="380" opacity="0.7">SMS backup, …</text>
+  <text class="sub source-text" x="56" y="394" opacity="0.7">adapter open</text>
+
+  <!-- ─────────────────────────────── LAYER 2: ADAPTERS ───────────────────── -->
+  <rect class="layer-bg" x="270" y="20" width="190" height="500" rx="8"/>
+  <text class="layer-label" x="290" y="44">ADAPTERS</text>
+
+  <rect class="adapter" x="290" y="70" width="150" height="60" rx="6"/>
+  <text class="title adapter-text" x="306" y="93">IMessageLive</text>
+  <text class="sub adapter-text" x="306" y="110">Adapter</text>
+  <text class="sub adapter-text" x="306" y="124">iter_messages()</text>
+
+  <rect class="adapter" x="290" y="160" width="150" height="60" rx="6"/>
+  <text class="title adapter-text" x="306" y="183">IMessageBackup</text>
+  <text class="sub adapter-text" x="306" y="200">Adapter</text>
+  <text class="sub adapter-text" x="306" y="214">iter_messages()</text>
+
+  <rect class="adapter" x="290" y="250" width="150" height="60" rx="6"/>
+  <text class="title adapter-text" x="306" y="273">WhatsAppExport</text>
+  <text class="sub adapter-text" x="306" y="290">Adapter</text>
+  <text class="sub adapter-text" x="306" y="304">iter_messages()</text>
+
+  <rect class="adapter" x="290" y="340" width="150" height="60" rx="6"
+        fill-opacity="0.5" stroke-dasharray="4 3"/>
+  <text class="title adapter-text" x="306" y="363" opacity="0.7">SourceAdapter</text>
+  <text class="sub adapter-text" x="306" y="380" opacity="0.7">Protocol</text>
+  <text class="sub adapter-text" x="306" y="394" opacity="0.7">add your own</text>
+
+  <!-- Source → adapter arrows -->
+  <path class="arrow" d="M 220 100 L 290 100"/>
+  <path class="arrow" d="M 220 190 L 290 190"/>
+  <path class="arrow" d="M 220 280 L 290 280"/>
+  <path class="arrow-dashed" d="M 220 370 L 290 370"/>
+
+  <!-- ─────────────────────────── LAYER 3: NORMALIZATION ──────────────────── -->
+  <rect class="layer-bg" x="490" y="20" width="180" height="500" rx="8"/>
+  <text class="layer-label" x="510" y="44">NORMALIZATION</text>
+
+  <rect class="canon" x="510" y="100" width="140" height="80" rx="6"/>
+  <text class="title canon-text" x="524" y="125">Canonical</text>
+  <text class="title canon-text" x="524" y="143">Message</text>
+  <text class="sub canon-text" x="524" y="160">source-agnostic</text>
+  <text class="sub canon-text" x="524" y="174">dataclass</text>
+
+  <rect class="canon" x="510" y="220" width="140" height="80" rx="6"/>
+  <text class="title canon-text" x="524" y="245">Person</text>
+  <text class="title canon-text" x="524" y="263">Resolver</text>
+  <text class="sub canon-text" x="524" y="280">handles + aliases</text>
+  <text class="sub canon-text" x="524" y="294">→ one identity</text>
+
+  <rect class="canon" x="510" y="340" width="140" height="80" rx="6"/>
+  <text class="title canon-text" x="524" y="365">Media kit</text>
+  <text class="sub canon-text" x="524" y="384">SHA-256 hash</text>
+  <text class="sub canon-text" x="524" y="398">thumbnails</text>
+  <text class="sub canon-text" x="524" y="412">format convert</text>
+
+  <!-- Adapter → CanonicalMessage convergence -->
+  <path class="arrow" d="M 440 100 L 510 130"/>
+  <path class="arrow" d="M 440 190 L 510 145"/>
+  <path class="arrow" d="M 440 280 L 510 160"/>
+  <!-- Canonical → resolver / mediakit -->
+  <path class="arrow" d="M 580 180 L 580 220"/>
+  <path class="arrow" d="M 580 300 L 580 340"/>
+
+  <!-- ─────────────────────────────── LAYER 4: STORAGE ────────────────────── -->
+  <rect class="layer-bg" x="700" y="20" width="180" height="240" rx="8"/>
+  <text class="layer-label" x="720" y="44">STORAGE</text>
+
+  <rect class="store" x="720" y="70" width="140" height="80" rx="6"/>
+  <text class="title store-text" x="734" y="95">SQLite</text>
+  <text class="sub store-text" x="734" y="113">data/visualizer.db</text>
+  <text class="sub store-text" x="734" y="127">WAL mode</text>
+  <text class="sub store-text" x="734" y="141">10 tables</text>
+
+  <rect class="store" x="720" y="170" width="140" height="80" rx="6"/>
+  <text class="title store-text" x="734" y="195">media/</text>
+  <text class="sub store-text" x="734" y="213">hash-based layout</text>
+  <text class="sub store-text" x="734" y="227">&lt;kind&gt;/&lt;prefix&gt;/</text>
+  <text class="sub store-text" x="734" y="241">&lt;hash&gt;.&lt;ext&gt;</text>
+
+  <!-- Normalization → storage -->
+  <path class="arrow" d="M 650 250 L 720 110"/>
+  <path class="arrow" d="M 650 380 L 720 210"/>
+
+  <!-- ─────────────────────────────── LAYER 5: API ────────────────────────── -->
+  <rect class="layer-bg" x="700" y="280" width="180" height="120" rx="8"/>
+  <text class="layer-label" x="720" y="304">API</text>
+
+  <rect class="api" x="720" y="320" width="140" height="68" rx="6"/>
+  <text class="title api-text" x="734" y="343">FastAPI</text>
+  <text class="sub api-text" x="734" y="360">/api/* REST</text>
+  <text class="sub api-text" x="734" y="376">/ws WebSocket</text>
+
+  <!-- Storage → API -->
+  <path class="arrow" d="M 790 250 L 790 320"/>
+
+  <!-- ─────────────────────────────── LAYER 6: UI ─────────────────────────── -->
+  <rect class="layer-bg" x="900" y="20" width="180" height="500" rx="8"/>
+  <text class="layer-label" x="920" y="44">UI</text>
+
+  <rect class="ui" x="920" y="70" width="140" height="80" rx="6"/>
+  <text class="title ui-text" x="934" y="93">Overview</text>
+  <text class="sub ui-text" x="934" y="111">device groups</text>
+  <text class="sub ui-text" x="934" y="125">chat cards</text>
+  <text class="sub ui-text" x="934" y="139">unread badges</text>
+
+  <rect class="ui" x="920" y="170" width="140" height="80" rx="6"/>
+  <text class="title ui-text" x="934" y="193">Chat</text>
+  <text class="sub ui-text" x="934" y="211">message list</text>
+  <text class="sub ui-text" x="934" y="225">media overview</text>
+  <text class="sub ui-text" x="934" y="239">edit diffs</text>
+
+  <rect class="ui" x="920" y="270" width="140" height="80" rx="6"/>
+  <text class="title ui-text" x="934" y="293">Heatmap</text>
+  <text class="sub ui-text" x="934" y="311">activity per day</text>
+  <text class="sub ui-text" x="934" y="325">multi-year scroll</text>
+  <text class="sub ui-text" x="934" y="339">click-to-jump</text>
+
+  <rect class="ui" x="920" y="370" width="140" height="80" rx="6"/>
+  <text class="title ui-text" x="934" y="393">Live push</text>
+  <text class="sub ui-text" x="934" y="411">WebSocket</text>
+  <text class="sub ui-text" x="934" y="425">new messages</text>
+  <text class="sub ui-text" x="934" y="439">delivered to UI</text>
+
+  <!-- API → UI -->
+  <path class="arrow" d="M 880 355 L 920 110"/>
+  <path class="arrow" d="M 880 355 L 920 210"/>
+  <path class="arrow" d="M 880 355 L 920 310"/>
+  <path class="arrow" d="M 880 355 L 920 410"/>
+</svg>

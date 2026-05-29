@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# msgviz dev — run msgviz against the local dev sandbox (dev/).
+#
+# Usage:
+#   ./scripts/msgviz-dev <subcommand> [args]
+#   ./scripts/msgviz-dev status
+#   ./scripts/msgviz-dev serve
+#   ./scripts/msgviz-dev init
+#
+# All paths (DB, media, config) live under dev/ — the production data
+# under data/ is untouched.
+
+cd "$(dirname "$0")/.." || exit 1
+
+if [ ! -d dev ]; then
+    echo "dev/ not present — creating skeleton …"
+    mkdir -p dev/data dev/config dev/media dev/originals
+fi
+
+export MSGVIZ_HOME="$(pwd)/dev"
+
+if [ -x .venv/bin/msgviz ]; then
+    exec .venv/bin/msgviz "$@"
+else
+    exec python -m msgviz "$@"
+fi

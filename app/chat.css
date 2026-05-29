@@ -1,0 +1,627 @@
+/* =========================================================================
+   Zentrales Design für alle Chat-Seiten + Index.
+   Eine Änderung hier wirkt auf ALLE Chats.
+   ========================================================================= */
+:root{
+  --txt:#f2f2f7; --sub:#8e8e93; --date:#e2e2e8;
+  --them:#262630; --me1:#2e9bff; --me2:#0a84ff;
+  --sec-a:#000000;        /* Tages-Section Ton A: schwarz */
+  --sec-b:#15151e;        /* Tages-Section Ton B: dunkelgrau */
+  --accent:#3a9bff;
+  --header-h:64px;        /* ungefähre Headerhöhe (für fixed Elemente) */
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#000;color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+
+/* ---------- Header ---------- */
+.header{position:sticky;top:0;z-index:70;backdrop-filter:saturate(180%) blur(20px);
+  background:rgba(10,10,16,.88);border-bottom:1px solid #23232c;padding:16px 20px;
+  box-shadow:0 6px 18px rgba(0,0,0,.45)}   /* leichter Schatten auf den Dialog */
+.hcenter{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:18px}
+/* Zurück-Button in den linken Rinnen-Bereich eingerückt (wie die Uhrzeit im Dialog),
+   damit der Avatar bündig an der Inhalts-Vorderkante sitzt */
+.back{color:var(--accent);text-decoration:none;font-size:20px;line-height:1;
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:9px;flex:0 0 auto;transition:background .15s,transform .1s;
+  margin-left:-52px;margin-right:6px}
+.back:hover{background:rgba(58,155,255,.14)}
+.back:active{transform:scale(.92)}
+.avwrap{position:relative;flex:0 0 auto;display:flex}
+.avatar{width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:600;background:linear-gradient(160deg,#7a7a85,#46464f);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4);
+  position:relative;overflow:hidden}
+/* Avatar-image wrapper: <img> covers the full circle, fallback initials behind. */
+.av-img-wrap{position:relative;overflow:hidden}
+.av-img-wrap .av-img{width:100%;height:100%;object-fit:cover;display:block}
+.av-img-wrap .av-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:inherit;font-weight:600;background:linear-gradient(160deg,#7a7a85,#46464f);color:#fff}
+/* Messaging-Dienst-Logo überlappt unten rechts den Avatar */
+.origin-badge{position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;
+  border:2px solid rgba(10,10,16,.95);box-shadow:0 1px 4px rgba(0,0,0,.5);background:#444}
+.origin-badge.origin-apple{background:#111}
+.origin-badge.origin-whatsapp{background:#25d366}
+.origin-badge.origin-signal{background:#3a76f0}
+.origin-badge.origin-sms{background:#34c759}
+.hinfo{flex:1;min-width:0}
+.title{font-size:17px;font-weight:600;line-height:1.2}
+.subtitle{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.period{font-size:11.5px;color:#9a9aa3;margin-top:3px}
+/* Info-Chips (Zeile 1) – linksbündig */
+.statline{max-width:900px;margin:16px auto 0;display:flex;flex-wrap:wrap;gap:9px;justify-content:flex-start}
+/* Medientyp-Chips (Zeile 2, darunter) – linksbündig */
+.medialine{max-width:900px;margin:10px auto 0;display:flex;flex-wrap:wrap;gap:9px;justify-content:flex-start}
+.pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:10px;
+  padding:6px 12px;font-size:12px;color:#d3d3da;display:inline-flex;align-items:center;gap:7px}
+.pill i{opacity:.85}
+.pill b{color:#fff}
+.pill .s{color:var(--accent)} .pill .r{color:#b6b6bd}
+/* Up/Down-Pfeile in Chips mit Abstand zur Zahl */
+.pill .s i,.pill .r i{margin-left:3px}
+/* Trennung zwischen gesendet/empfangen: Abstand statt Slash */
+.pill .updown{display:inline-flex;align-items:center;gap:10px}
+.pill.btn{cursor:pointer;color:#7cc0ff;border-color:rgba(58,155,255,.28);background:rgba(58,155,255,.12);transition:background .15s,transform .1s}
+.pill.btn:hover{background:rgba(58,155,255,.24)}
+.pill.btn:active{transform:scale(.96)}
+
+/* ---------- Rechtes Panel: Datums-Navigation + Heatmap als EIN Block ---------- */
+.daypanel{position:fixed;top:84px;right:14px;z-index:35;   /* top per JS auf Headerhöhe */
+  width:230px;                                              /* gemeinsame Breite */
+  background:rgba(20,20,28,.94);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.14);border-radius:14px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);overflow:hidden;
+  opacity:0;transition:opacity .2s;pointer-events:none}
+.daypanel.show{opacity:1;pointer-events:auto}
+
+/* Datums-Navigationszeile (oben im Panel) */
+.dateflag{display:flex;align-items:center;gap:2px;padding:5px 5px}
+.dateflag .df-label{flex:1;font-size:12.5px;font-weight:600;color:#fff;padding:0 6px;
+  text-align:center;line-height:1.25;white-space:nowrap}
+.dateflag .df-label .wd{display:block;font-size:9.5px;color:#9a9aa3;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.dateflag .df-nav{width:30px;height:34px;border:none;border-radius:10px;cursor:pointer;
+  background:rgba(255,255,255,.06);color:#cfcfd6;font-size:13px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s,transform .1s}
+.dateflag .df-nav:hover{background:rgba(58,155,255,.25);color:#fff}
+.dateflag .df-nav:active{transform:scale(.88)}
+.dateflag .df-nav:disabled{opacity:.3;cursor:default;background:transparent}
+/* Toggle-Button: eigene, mittig zentrierte Leiste unter der Datums-Navigation */
+.daypanel .df-toggle{margin:2px auto 4px;width:46px;height:20px;border:none;cursor:pointer;
+  border-radius:8px;background:rgba(58,155,255,.14);color:#7cc0ff;font-size:11px;
+  display:flex;align-items:center;justify-content:center;transition:background .15s,transform .1s}
+.daypanel .df-toggle:hover{background:rgba(58,155,255,.28);color:#fff}
+.daypanel .df-toggle:active{transform:scale(.92)}
+
+/* ---------- Kalender-Heatmap: Teil des rechten Panels, hochkant ---------- */
+/* Wochen laufen vertikal (oben=Start, unten=Ende), Wochentage als 7 Spalten. */
+.heatmap{border-top:1px solid rgba(255,255,255,.1);padding:8px 8px 8px;
+  overflow:hidden;transition:max-height .28s ease,opacity .2s ease,padding .28s ease;max-height:60vh}
+/* eingeklappt: Heatmap verschwindet, nur Datums-Navigation bleibt */
+.daypanel.collapsed .heatmap{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-top-color:transparent}
+.heatmap .hm-head{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--sub);
+  margin-bottom:6px;justify-content:center}
+.heatmap .hm-head i{color:var(--accent);font-size:10px}
+.hm-scroll{overflow-y:auto;overflow-x:hidden;display:flex;justify-content:stretch;
+  max-height:50vh;                         /* Höhe max. 50% des Screens */
+  padding:15px 8px;                        /* oben/unten Fade, links/rechts Platz für Hover-Zoom/Markierung */
+  /* sanftes Ausfaden oben & unten (15px) */
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 15px,#000 calc(100% - 15px),transparent 100%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 15px,#000 calc(100% - 15px),transparent 100%);
+  /* Scrollbar ausblenden */
+  scrollbar-width:none;-ms-overflow-style:none}
+.hm-scroll::-webkit-scrollbar{display:none;width:0;height:0}
+.hm-inner{display:flex;flex-direction:column;gap:3px;width:100%}
+/* Eine Woche = eine Zeile: [Monatslabel | 7 Tageskacheln] -> Labels fluchten exakt */
+.hm-week{display:grid;grid-template-columns:24px repeat(7,1fr);gap:3px;align-items:center}
+.hm-mlabel{font-size:9px;color:var(--sub);text-align:right;line-height:1;white-space:nowrap}
+.hm-cell{aspect-ratio:1/1;border-radius:3px;background:rgba(255,255,255,.05);transition:transform .12s,box-shadow .12s}
+/* Jahres-Trenner: volle Breite mit Linie + Jahreszahl */
+.hm-year{display:flex;align-items:center;gap:8px;margin:6px 0 3px;
+  font-size:11px;font-weight:700;color:#cfcfd6}
+.hm-year span{flex:0 0 auto}
+.hm-year::before,.hm-year::after{content:"";height:1px;background:rgba(255,255,255,.16)}
+.hm-year::before{width:22px;flex:0 0 auto}
+.hm-year::after{flex:1}
+/* Monats-Trenner: nur dünne Linie, dunkler & enger als Jahreslinie */
+.hm-msep{height:1px;background:rgba(255,255,255,.07);margin:2px 0}
+.hm-cell.has{cursor:pointer}
+/* Hover: leichter Zoom + dunkler Outline in Heatmap-Hintergrundfarbe (mit Transition) */
+.hm-cell.has:hover{transform:scale(1.3);box-shadow:0 0 0 2px rgb(20,20,28);position:relative;z-index:1}
+.hm-cell.l0{background:rgba(255,255,255,.045)}
+.hm-cell.hm-pad{background:transparent;pointer-events:none}
+.hm-cell.l1{background:#173a5e}
+.hm-cell.l2{background:#1e5a96}
+.hm-cell.l3{background:#2e86d6}
+.hm-cell.l4{background:#54a8ff}
+.hm-cell.l5{background:#8fcaff}
+/* aktueller Tag: dezente Markierung (feiner heller Ring, kein greller Outline) */
+.hm-cell.current{background:#fff !important;position:relative;z-index:2}
+/* auf schmalen Screens (Handy) ausblenden */
+@media(max-width:680px){.daypanel{display:none}}
+
+/* ---------- Chat-Liste ---------- */
+.chat{padding:0 0 90px}
+/* Tages-Section über volle Viewport-Breite */
+.day{padding:0;width:100%}
+.day.a{background:var(--sec-a)}
+.day.b{background:var(--sec-b)}
+/* Innenbereich auf Lesebreite zentriert. KEIN linkes Padding, damit die Bubbles
+   bündig mit dem Header-Inhalt (hcenter) starten. Die Zeit ist absolut positioniert
+   und ragt nach links außerhalb (negativer Offset) – sie braucht kein Padding. */
+/* dayinner = gleiche max-width/Zentrierung wie der Header (-> linke Kante bündig),
+   ABER der Chat-Content ist schmaler: rechtes Padding rückt die rechte Bubble-Kante
+   nach innen. Links bleibt 0 (Bubbles bündig zum Header, Zeit ragt nach außen). */
+.dayinner{max-width:900px;margin:0 auto;position:relative;
+  padding-top:6px;padding-bottom:14px;padding-left:0;padding-right:160px}
+.dayhead{padding-right:24px}
+@media(min-width:861px){
+  .dayhead{padding-right:236px}
+}
+@media(min-width:681px) and (max-width:860px){
+  .dayhead{padding-right:150px}
+}
+/* Datum LINKS am Bildrand, full-width Leiste */
+.dayhead{width:100%;display:flex;justify-content:flex-start;align-items:baseline;gap:10px;
+  padding:8px 16px;scroll-margin-top:90px;border-top:1px solid rgba(255,255,255,.05)}
+.dayhead .wd{font-size:11px;color:#7e7e88;text-transform:uppercase;letter-spacing:.5px}
+.dayhead .dt{font-size:13px;font-weight:700;color:var(--date)}
+
+.row{display:flex;margin:0 0 3px;align-items:flex-end;position:relative}
+.row.me{justify-content:flex-end}
+.row.them{justify-content:flex-start}
+.bubble{position:relative;max-width:74%;padding:8px 13px;border-radius:20px;font-size:15.5px;
+  line-height:1.35;word-wrap:break-word;white-space:pre-wrap;box-shadow:0 1px 1px rgba(0,0,0,.25)}
+.me .bubble{background:linear-gradient(180deg,var(--me1),var(--me2));color:#fff;border-bottom-right-radius:6px}
+.them .bubble{background:var(--them);color:var(--txt);border-bottom-left-radius:6px}
+.sender{font-size:11px;color:#9a9aa3;margin:6px 10px 1px;font-weight:600}
+.time{font-size:10.5px;color:var(--sub);white-space:nowrap;opacity:.7;
+  flex:0 0 38px;width:38px;margin-bottom:4px}
+/* Zeit im Flow direkt neben der Bubble; per negativem Margin nach außen,
+   damit die Bubble selbst bündig bleibt und die Zeit direkt an ihr klebt. */
+.them .time{order:0;text-align:right;margin-left:-46px;margin-right:8px}
+.me .time{order:2;text-align:left;margin-right:-46px;margin-left:8px}
+.me .bubble,.them .bubble{order:1}
+/* Das Reaktions-Badge ragt OBEN aus der Bubble (top:-12px) -> Platz nach OBEN
+   schaffen, nicht nach unten. Sonst entsteht eine Lücke unter der Nachricht. */
+.row:has(.bubble.has-react){margin-top:14px}
+/* Reaktions-Badge an der oberen Bubble-Ecke (wie iMessage) */
+.reactions{position:absolute;top:-12px;display:flex;gap:2px;z-index:2;pointer-events:auto}
+/* eingehend (links angeordnet) -> Badge rechts oben; gesendet -> links oben */
+.them .reactions{right:-6px}
+.me .reactions{left:-6px}
+.reactions .react{font-size:13px;line-height:1;background:var(--them);
+  border:1.5px solid #0b0b0f;border-radius:50%;width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;cursor:default;
+  box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.me .reactions .react{background:#1d5fa8}
+.bubble img,.bubble video{max-width:100%;border-radius:16px;display:block;margin:0}
+.bubble.media{padding:0;background:transparent !important;box-shadow:none;overflow:hidden}
+/* Hochformatige Einzelbilder/Videos: halb so breit (sonst zu dominant/lang) */
+.bubble.media.portrait{max-width:37%}
+/* Bilder/Videos bekommen wie Textblasen die abgeflachte Ecke (Sprechblasen-Look) */
+.me .bubble.media{border-radius:16px;border-bottom-right-radius:6px}
+.them .bubble.media{border-radius:16px;border-bottom-left-radius:6px}
+.me .bubble.media img,.me .bubble.media video{border-bottom-right-radius:6px}
+.them .bubble.media img,.them .bubble.media video{border-bottom-left-radius:6px}
+.sticker{max-width:120px !important;background:transparent;box-shadow:none}
+.bubble.media:has(.sticker){overflow:visible}   /* Sticker bleiben rund/transparent */
+img.lb,video.lb{cursor:zoom-in}
+/* Lazy Loading: Platzhalter, solange Bild noch nicht geladen ist */
+img.lazyload,img.lazyloading{background:#1a1a22;min-height:60px;min-width:60px;
+  border:0;outline:0;color:transparent;font-size:0;opacity:0}   /* kein Broken-Icon/Outline */
+.bubble.media img.lazyload,.bubble.media img.lazyloading{min-height:120px;min-width:120px}
+.gallery .gi img.lazyload,.mo-grid .cell img.lazyload{min-height:100%;min-width:100%}
+/* schneller, sanfter Fade-in nach dem Laden */
+img.lazyloaded{background:none;min-height:0;min-width:0;color:inherit;
+  opacity:1;transition:opacity .3s ease}
+
+/* Galerie */
+.gallery{display:grid;gap:4px;border-radius:14px;overflow:hidden;max-width:340px}
+.gallery.n3,.gallery.n4{grid-template-columns:1fr 1fr}
+.gallery.n5,.gallery.n6,.gallery.nmany{grid-template-columns:1fr 1fr 1fr}
+.gallery .gi{position:relative;aspect-ratio:1/1;overflow:hidden;cursor:zoom-in;background:#1a1a22}
+.gallery .gi img{width:100%;height:100%;object-fit:cover;border-radius:0;margin:0;display:block;border:0;outline:0}
+.gallery .more{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
+
+.appchip{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;opacity:.92}
+.missing{font-size:13px;color:var(--sub);font-style:italic;background:#1f1f26;border:1px dashed #3a3a42;border-radius:12px;padding:8px 12px;display:inline-flex;gap:7px;align-items:center}
+.tapback{font-size:12px;color:var(--sub);margin:1px 12px;font-style:italic}
+/* Sprachnachrichten breiter: ~2/3 der Chat-Breite, damit die Player-Timeline sichtbar ist */
+/* Sprachnachricht-Bubble: in Chat-Partei-Farbe, mit Sprechblasen-Ecke zur Uhrzeit */
+.bubble.voice{max-width:none;padding:8px 12px}
+.me .bubble.voice{background:linear-gradient(180deg,var(--me1),var(--me2));border-bottom-right-radius:6px}
+.them .bubble.voice{background:var(--them);border-bottom-left-radius:6px}
+.voicemsg{display:flex;align-items:center;gap:10px;width:62vw;max-width:480px;min-width:280px}
+/* Mic-Icon: vertikal zentriert, eingefärbt nach Partei, auf der UHRZEIT-ABGEWANDTEN Seite */
+.voiceicon{font-size:20px;line-height:1;flex:0 0 auto;align-self:center}
+.me .voiceicon{order:0;color:#eaf4ff}        /* me (blau): helles Weißblau, Mic links */
+.them .voiceicon{order:2;color:#c7c7cf}       /* them (grau): neutrales Hellgrau, Mic rechts */
+.voicewrap{flex:1;min-width:0;order:1}
+.voicelabel{font-size:12px;opacity:.85;margin:0 0 4px 2px}
+.me .voicelabel{color:#eaf4ff}
+/* ---- Custom Voice-Player: fügt sich in die Bubble-Farbe ein ---- */
+.vplayer{display:flex;align-items:center;gap:10px}
+.vplayer audio{display:none}
+.vp-play{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  transition:transform .1s,background .15s}
+.vp-play:active{transform:scale(.9)}
+.vp-bar{position:relative;flex:1;height:5px;border-radius:3px;cursor:pointer;min-width:60px}
+.vp-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:3px}
+.vp-knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;
+  left:0;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.vp-time{flex:0 0 auto;font-size:11px;font-variant-numeric:tabular-nums;opacity:.85;min-width:34px;text-align:right}
+/* them (graue Bubble): durchgehend GRAU-/Weißtöne, kein Blau */
+.them .vp-play{background:rgba(255,255,255,.16);color:#fff}
+.them .vp-play:hover{background:rgba(255,255,255,.28)}
+.them .vp-bar{background:rgba(255,255,255,.14)}
+.them .vp-fill{background:rgba(255,255,255,.7)}
+.them .vp-knob{background:#fff}
+.them .vp-time{color:var(--txt)}
+/* me (blaue Bubble): weißer Akzent auf Blau */
+.me .vp-play{background:rgba(255,255,255,.9);color:var(--me2)}
+.me .vp-play:hover{background:#fff}
+.me .vp-bar{background:rgba(255,255,255,.3)}
+.me .vp-fill{background:#fff}
+.me .vp-knob{background:#fff}
+.me .vp-time{color:#eaf4ff}
+.msglink{color:inherit;text-decoration:underline;text-underline-offset:2px;word-break:break-all}
+.them .msglink{color:#5ab0ff}
+.footer{text-align:center;color:#5b5b62;font-size:11px;padding:24px}
+
+/* ---------- Scroll-to-top Button (dezent) ---------- */
+.totop{position:fixed;bottom:22px;right:18px;z-index:50;width:42px;height:42px;border-radius:50%;
+  cursor:pointer;background:rgba(30,30,38,.82);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);color:#c7c7cf;
+  font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  opacity:0;transform:translateY(10px);pointer-events:none;
+  transition:opacity .2s,transform .2s,background .15s,color .15s;display:flex;align-items:center;justify-content:center}
+.totop.show{opacity:.85;transform:translateY(0);pointer-events:auto}
+.totop:hover{opacity:1;background:rgba(48,48,58,.92);color:#fff}
+.totop:active{transform:scale(.92)}
+
+/* ---------- Lightbox ---------- */
+.lightbox{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center}
+.lightbox.open{display:flex}
+.lightbox img,.lightbox video{max-width:94vw;max-height:88vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+.lb-cap{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#ccc;font-size:13px}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);font-size:22px;color:#fff;cursor:pointer;
+  background:rgba(255,255,255,.08);border:none;width:54px;height:74px;border-radius:12px;transition:background .15s,transform .1s}
+.lb-nav:hover{background:rgba(255,255,255,.18)}
+.lb-nav:active{transform:translateY(-50%) scale(.92)}
+.lb-prev{left:18px} .lb-next{right:18px}
+/* Einzelbild: keine Vor/Zurück-Buttons, Bild per Klick schließbar */
+.lightbox.single .lb-nav{display:none}
+.lightbox.single img{cursor:zoom-out}
+
+/* ---------- Datei-Chips im Chat (PDF / vCard / Standort / Watchface) ---------- */
+.filechip{display:inline-flex;align-items:center;gap:11px;cursor:pointer;text-decoration:none;color:inherit;
+  background:linear-gradient(180deg,#1c1c26,#15151d);border:1px solid #2a2a35;border-radius:14px;
+  padding:10px 12px 10px 15px;min-width:230px;transition:border-color .15s,transform .1s,background .15s,box-shadow .15s}
+.filechip:hover{border-color:rgba(58,155,255,.5);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.filechip:active{transform:scale(.98)}
+.filechip .fc-type{font-size:24px;color:#9fd0ff;width:26px;text-align:center;flex:0 0 auto}
+.filechip .fc-info{display:flex;flex-direction:column;line-height:1.25;min-width:0;flex:1 1 auto}
+.filechip .fc-name{font-size:13.5px;font-weight:600;color:#e7e7ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filechip .fc-ext{font-size:10.5px;color:var(--sub);letter-spacing:.04em}
+/* Aktions-Pille rechts: signalisiert "ansehbar" */
+.filechip .fc-act{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:8px;
+  font-size:12px;font-weight:600;color:#bfe0ff;
+  background:rgba(58,155,255,.14);border:1px solid rgba(58,155,255,.28);border-radius:9px;
+  padding:6px 11px;transition:background .15s,border-color .15s,color .15s}
+.filechip .fc-act i{font-size:12px}
+.filechip:hover .fc-act{background:rgba(58,155,255,.28);border-color:rgba(58,155,255,.55);color:#fff}
+/* Nicht-ansehbare Datei (Download): neutraler Ton */
+.filechip:not(.viewable) .fc-type{color:#b6b6bd}
+.filechip:not(.viewable) .fc-act{color:#cfcfd6;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}
+.filechip:not(.viewable):hover{border-color:rgba(255,255,255,.28)}
+.filechip:not(.viewable):hover .fc-act{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.24);color:#fff}
+
+/* ---------- Lightbox: PDF & Datei-Views ---------- */
+.lb-pdf{width:90vw;height:88vh;border:0;border-radius:8px;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+.lb-file{display:flex;flex-direction:column;align-items:center;gap:14px;color:#ddd;font-size:15px;
+  background:#16161e;border:1px solid #2a2a35;border-radius:16px;padding:40px 46px;text-align:center}
+.lb-file > i{font-size:48px;color:#9fd0ff}
+.lb-file.lb-loading{border:0;background:transparent}
+.lb-fname{font-size:14px;color:#cfcfd6;word-break:break-all;max-width:60vw}
+/* vCard (Kontakt / Standort) */
+.vcard{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:300px;max-width:90vw;
+  background:linear-gradient(180deg,#1b1b25,#141420);border:1px solid #2a2a35;border-radius:18px;
+  padding:30px 34px 26px;box-shadow:0 10px 50px rgba(0,0,0,.55)}
+.vcard .vc-ico{width:78px;height:78px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:34px;color:#fff;background:linear-gradient(160deg,#3a9bff,#2a6fd0);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.vcard-loc .vc-ico{background:linear-gradient(160deg,#34c759,#1e9e44)}
+.vcard .vc-photo{width:96px;height:96px;border-radius:50%;object-fit:cover;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.vcard .vc-name{font-size:20px;font-weight:700;color:#fff}
+.vcard .vc-org{font-size:13px;color:var(--sub);margin-top:-4px}
+.vcard .vc-rows{display:flex;flex-direction:column;gap:7px;margin:6px 0 4px;width:100%}
+.vcard .vc-row{display:flex;align-items:center;gap:9px;font-size:14px;color:#dcdce3;justify-content:center}
+.vcard .vc-row i{color:#9fd0ff;width:18px;text-align:center}
+.vcard .vc-row a{color:#9fd0ff;text-decoration:none}
+.vcard .vc-row a:hover{text-decoration:underline}
+.vcard .vc-btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;margin-top:8px;
+  background:rgba(58,155,255,.16);border:1px solid rgba(58,155,255,.32);color:#bfe0ff;
+  border-radius:11px;padding:9px 16px;font-size:13.5px;font-weight:600;transition:background .15s,border-color .15s}
+.vcard .vc-btn:hover{background:rgba(58,155,255,.26);border-color:rgba(58,155,255,.5)}
+.vcard-loc .vc-btn{background:rgba(52,199,89,.16);border-color:rgba(52,199,89,.32);color:#bff0cd}
+.vcard-loc .vc-btn:hover{background:rgba(52,199,89,.26);border-color:rgba(52,199,89,.5)}
+.vcard .vc-btn2{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#cfcfd6}
+.vcard .vc-btn2:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- Close-Button (Modals) – dezent ---------- */
+.closebtn{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);color:#b6b6bd;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,transform .12s,border-color .15s,color .15s}
+.closebtn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);color:#fff;transform:rotate(90deg)}
+.closebtn:active{transform:rotate(90deg) scale(.9)}
+.lb-close{position:absolute;top:16px;right:20px;z-index:2}
+
+/* ---------- Transkript: Button + Modal ---------- */
+.trbtn{margin-left:8px;border:none;background:rgba(90,176,255,.18);color:#7cc0ff;cursor:pointer;
+  width:22px;height:22px;border-radius:7px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;
+  vertical-align:middle;transition:background .15s,color .15s,transform .1s}
+.trbtn:hover{background:rgba(90,176,255,.32);color:#fff}
+.trbtn:active{transform:scale(.9)}
+.me .trbtn{background:rgba(255,255,255,.22);color:#fff}
+.me .trbtn:hover{background:rgba(255,255,255,.35)}
+/* Transkript-Button auf Audio-Kachel (oben rechts) */
+.mo-grid .cell.audio .trbtn.tile{position:absolute;top:7px;right:7px;width:26px;height:26px;font-size:12px;z-index:2}
+
+/* ---------- OCR-Badge auf Bildern (Text-im-Bild erkannt) ---------- */
+.bubble.media,.gallery .gi,.mo-grid .cell{position:relative}
+.ocrbtn{position:absolute;top:7px;right:7px;border:none;background:rgba(20,20,28,.78);color:#cfe6ff;cursor:pointer;
+  width:26px;height:26px;border-radius:8px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;
+  z-index:3;backdrop-filter:blur(6px);transition:background .15s,color .15s,transform .1s;
+  box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.ocrbtn:hover{background:rgba(58,155,255,.55);color:#fff}
+.ocrbtn:active{transform:scale(.9)}
+.ocrbtn.tile{top:7px;right:7px}
+
+.trmodal{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:20px}
+.trmodal.open{display:flex}
+.trbox{background:#15151e;border:1px solid #2a2a34;border-radius:18px;max-width:520px;width:100%;
+  max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 50px rgba(0,0,0,.6)}
+.trbox .tr-top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #23232c}
+.trbox .tr-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px;color:#fff}
+.trbox .tr-title i{color:var(--accent)}
+.trbox .tr-meta{padding:10px 18px 0;font-size:12px;color:var(--sub)}
+.trbox .tr-text{padding:10px 18px 16px;font-size:15px;line-height:1.5;color:var(--txt);overflow:auto}
+.trbox .tr-foot{padding:10px 18px 14px;font-size:11px;color:#6f6f78;border-top:1px solid #1e1e26;display:flex;align-items:center;gap:7px}
+.trbox .tr-foot i{color:var(--accent);opacity:.7}
+
+/* ---------- Medien-Übersicht (Overlay) ---------- */
+/* Startet UNTER dem Header (top wird per JS auf die echte Headerhöhe gesetzt),
+   nicht mehr fullscreen. Liegt ÜBER Heatmap (35) und Page-Up (50), aber UNTER
+   dem Header (70) – der Header bleibt sichtbar/bedienbar. */
+.mediaoverlay{position:fixed;top:var(--header-h);left:0;right:0;bottom:0;z-index:60;background:rgba(8,8,12,.98);display:none;flex-direction:column;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.mediaoverlay.open{display:flex}
+/* .mo-top/.mo-title/.mo-tabs entfernt: Überschrift + Tab-Leiste sind redundant –
+   der gewählte Typ ist schon am Header-Chip ersichtlich. */
+/* Filterleiste (Bilder/Sprachnachrichten) */
+.mo-filters{display:flex;gap:8px;padding:14px 20px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #23232c}
+.mo-filters .flabel{font-size:12px;color:var(--sub);margin-right:2px}
+.mo-filters .fsep{width:1px;align-self:stretch;background:rgba(255,255,255,.12);margin:2px 4px}
+.fbtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;
+  padding:5px 12px;font-size:12.5px;cursor:pointer;color:#cfcfd6;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.fbtn:hover{background:rgba(255,255,255,.1)}
+.fbtn.on{background:rgba(58,155,255,.22);border-color:rgba(58,155,255,.5);color:#fff}
+.fbtn i{font-size:11px}
+.mo-body{flex:1;overflow:auto;padding:14px 20px 60px}
+.mo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.mo-grid .cell{aspect-ratio:1/1;overflow:hidden;border-radius:10px;background:#16161c;cursor:zoom-in;position:relative;
+  border:1px solid transparent;transition:border-color .15s,transform .1s,box-shadow .15s}
+.mo-grid .cell:hover{border-color:rgba(90,176,255,.55);box-shadow:0 0 0 1px rgba(90,176,255,.25)}
+.mo-grid .cell:active{transform:scale(.98)}
+.mo-grid .cell img,.mo-grid .cell video{width:100%;height:100%;object-fit:cover;transition:transform .2s,filter .15s}
+.mo-grid .cell:hover img,.mo-grid .cell:hover video{transform:scale(1.06);filter:brightness(1.08)}
+.mo-grid .cell .mt{position:absolute;left:6px;bottom:6px;font-size:11px;background:rgba(0,0,0,.6);padding:2px 7px;border-radius:7px;display:flex;align-items:center;gap:5px}
+/* Audio-Kachel */
+.mo-grid .cell.audio{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;background:linear-gradient(160deg,#1c2230,#13131b);padding:12px 12px 10px;text-align:center;gap:7px;
+  border:1px solid transparent;transition:border-color .15s,background .15s,transform .1s}
+.mo-grid .cell.audio:hover{border-color:rgba(90,176,255,.45);background:linear-gradient(160deg,#23304a,#16161f)}
+.mo-grid .cell.audio:hover .ai{color:#7cc0ff}
+.mo-grid .cell.audio:active{transform:scale(.98)}
+.mo-grid .cell.audio .ai{font-size:30px;color:var(--accent);transition:transform .2s,color .2s}
+.mo-grid .cell.audio .who{font-size:13px;font-weight:600;color:#fff}
+.mo-grid .cell.audio .when{font-size:11px;color:var(--sub)}
+.mo-grid .cell.audio.playing{outline:2px solid var(--accent);background:linear-gradient(160deg,#22304a,#15151f)}
+/* Pulse-Animation des Mics beim Abspielen */
+.mo-grid .cell.audio.playing .ai{color:#5ab0ff;animation:micpulse 1.1s ease-in-out infinite}
+@keyframes micpulse{
+  0%{transform:scale(1);text-shadow:0 0 0 rgba(58,155,255,0)}
+  50%{transform:scale(1.18);text-shadow:0 0 14px rgba(58,155,255,.7)}
+  100%{transform:scale(1);text-shadow:0 0 0 rgba(58,155,255,0)}
+}
+/* Fortschrittsanzeige */
+.mo-grid .cell.audio .progwrap{width:100%;margin-top:2px;display:flex;flex-direction:column;gap:3px;
+  opacity:0;max-height:0;transition:opacity .2s,max-height .2s;overflow:hidden}
+.mo-grid .cell.audio.playing .progwrap,.mo-grid .cell.audio.played .progwrap{opacity:1;max-height:40px;overflow:visible}
+/* vertikales Padding, damit der runde Knopf nicht oben/unten abgeschnitten wird */
+.mo-grid .cell.audio .progbar{position:relative;height:6px;margin:4px 1px;border-radius:4px;background:rgba(255,255,255,.14);cursor:pointer}
+.mo-grid .cell.audio .progbar .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:4px;background:var(--accent);transition:width .08s linear}
+.mo-grid .cell.audio .progbar .knob{position:absolute;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.5);left:0;opacity:0;transition:opacity .15s}
+.mo-grid .cell.audio.playing .progbar .knob,.mo-grid .cell.audio.played .progbar .knob,.mo-grid .cell.audio .progbar:hover .knob{opacity:1}
+.mo-grid .cell.audio .progtime{font-size:10px;color:var(--sub);font-variant-numeric:tabular-nums;letter-spacing:.3px}
+/* Datei-Kacheln in der Übersicht */
+.mo-grid .cell.file{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  text-align:center;padding:14px 12px;background:linear-gradient(160deg,#1b1b25,#15151d);
+  border:1px solid #2a2a35;cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+.mo-grid .cell.file:hover{border-color:rgba(58,155,255,.5);background:linear-gradient(160deg,#22304a,#16161f);transform:translateY(-1px)}
+.mo-grid .cell.file:active{transform:scale(.98)}
+.mo-grid .cell.file .fc-type{font-size:32px;color:#9fd0ff;transition:color .2s}
+.mo-grid .cell.file:not(.viewable) .fc-type{color:#b6b6bd}
+.mo-grid .cell.file .ff-name{font-size:13px;font-weight:600;color:#e7e7ee;line-height:1.2}
+.mo-grid .cell.file .ff-meta{font-size:10.5px;color:var(--sub);letter-spacing:.03em}
+.mo-grid .cell.file .ff-who{font-size:11px;color:#9a9aa3}
+.mo-grid .cell.file .fc-act{display:inline-flex;align-items:center;gap:6px;margin-top:6px;
+  font-size:11.5px;font-weight:600;color:#bfe0ff;background:rgba(58,155,255,.14);
+  border:1px solid rgba(58,155,255,.28);border-radius:9px;padding:5px 10px;transition:background .15s,border-color .15s,color .15s}
+.mo-grid .cell.file:hover .fc-act{background:rgba(58,155,255,.28);border-color:rgba(58,155,255,.55);color:#fff}
+.mo-grid .cell.file:not(.viewable) .fc-act{color:#cfcfd6;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}
+.mo-empty{color:var(--sub);font-style:italic;padding:30px;text-align:center}
+
+/* ---------- Index-Startseite ---------- */
+.index-wrap{max-width:920px;margin:0 auto;padding:30px 18px 80px}
+.index-head{text-align:center;margin-bottom:26px}
+.index-head h1{font-size:24px;margin:0 0 6px;display:flex;align-items:center;justify-content:center;gap:10px}
+.index-head .meta{color:var(--sub);font-size:13px}
+.device-section{margin-top:18px}
+.device-section[open]{margin-bottom:18px}
+.device-section summary{list-style:none;cursor:pointer}
+.device-section summary::-webkit-details-marker{display:none}
+.device-head{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:#fff;
+  margin:8px 2px 12px;padding-bottom:8px;border-bottom:1px solid #23232c;user-select:none}
+.device-head i{color:var(--accent)}
+/* Chevron rotiert synchron zur max-height-Animation (s. .cards-wrap).
+   Wir steuern den Drehwinkel inline per JS (--chev-rot), damit das Chevron
+   nicht erst am Ende der Animation kippt (open-Attribut wechselt erst
+   nach transitionend). */
+.device-head .device-chev{
+  transition:transform .45s cubic-bezier(.22,.61,.36,1);
+  transform:rotate(var(--chev-rot, 0deg));
+}
+.device-section:not([open]) .device-head .device-chev{ --chev-rot:-90deg }
+.device-section:not([open]) .device-head{border-bottom-color:transparent}
+.device-head .device-meta{font-size:12px;font-weight:400;color:var(--sub);margin-left:auto}
+.device-section:hover .device-head{border-bottom-color:rgba(58,155,255,.4)}
+
+/* --- Aus-/Einklapp-Animation ----------------------------------------------
+   - Der Container (.cards) bekommt einen Wrapper, dessen max-height per JS
+     auf den scrollHeight gesetzt + animiert wird. Browser-übergreifend
+     zuverlässig (max-height auto-interpoliert auf 'auto' funktioniert nicht).
+   - Einzel-Cards faden gestaffelt ein (Opacity + Blur, KEINE Bewegung).
+*/
+.device-section .cards-wrap{
+  overflow:hidden;
+  transition:max-height .45s cubic-bezier(.22,.61,.36,1);
+  /* Padding oben/unten = 2px, damit Card-Hover (translateY(-2px)) und der
+     Card-Schatten nicht am Wrapper-Rand abgeschnitten werden. */
+  padding:2px 0;
+  margin:-2px 0;   /* visuell neutral: die 2px Padding heben wir per neg. Margin auf */
+  /* offen-Zustand bekommt im JS max-height:<scrollHeight>px; danach 'none' */
+}
+.device-section:not([open]) .cards-wrap{
+  max-height:0 !important;
+  /* im geschlossenen Zustand auch das Padding wegnehmen, sonst bleibt
+     ein 4px-Streifen sichtbar. */
+  padding:0;
+  margin:0;
+}
+
+/* Cards-Stagger: Opacity + leichter Blur, keine Translate/Scale-Bewegung. */
+@keyframes card-fade-in {
+  from{ opacity:0; filter:blur(6px); }
+  to  { opacity:1; filter:blur(0); }
+}
+.device-section[open] .cards .card{
+  animation: card-fade-in .4s ease-out both;
+  animation-delay: calc(var(--i, 0) * 50ms + 80ms);
+}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{display:block;text-decoration:none;color:inherit;background:linear-gradient(180deg,#16161e,#101016);
+  border:1px solid #23232c;border-radius:18px;padding:18px;transition:transform .12s,border-color .12s}
+.card:hover{transform:translateY(-2px);border-color:rgba(58,155,255,.4)}
+.card .top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.card .av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:600;background:linear-gradient(160deg,#7a7a85,#46464f);color:#fff;flex:0 0 auto;
+  position:relative;overflow:hidden}
+.card .nm{font-size:16px;font-weight:600}
+.card .pd{font-size:11.5px;color:var(--sub);margin-top:2px}
+.card .big{font-size:26px;font-weight:800;color:#fff;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.card .big small{font-size:12px;font-weight:600;color:var(--sub)}
+.card .sizebadge{margin-left:auto;font-size:11.5px;font-weight:600;color:#9fd0ff;
+  background:rgba(58,155,255,.14);border:1px solid rgba(58,155,255,.25);border-radius:8px;
+  padding:2px 8px;display:inline-flex;align-items:center;gap:5px;align-self:center}
+.card .sizebadge .orig{color:var(--sub);font-weight:400;font-size:10.5px}
+/* Speicher-Chip als eigene Zeile direkt über den Medien-Chips, linksbündig */
+.card .sizeline{display:flex;margin-top:12px}
+.card .sizeline .sizebadge{margin-left:0;align-self:flex-start}
+.card .sizeline + .mline{margin-top:8px}
+.card .split{font-size:12px;color:var(--sub);margin-top:3px}
+.card .split .s{color:var(--accent)}
+.card .mline{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#c7c7cf}
+.card .mline span{background:rgba(255,255,255,.05);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:6px}
+.card .mline em{font-style:normal;color:var(--sub);font-size:11px;opacity:.85}
+/* Größenangabe in den Header-Medien-Chips */
+.pill .sz{font-style:normal;color:var(--sub);font-size:11px;margin-left:5px;opacity:.85}
+.badge-group{display:inline-flex;align-items:center;gap:5px;font-size:10px;background:rgba(58,155,255,.2);color:#7cc0ff;
+  border-radius:6px;padding:2px 7px;margin-left:8px;vertical-align:middle}
+
+/* ---------- Bearbeitete / zurückgezogene Nachrichten ---------- */
+.edit-wrap{margin-top:5px}
+.edit-toggle{display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  font-size:11px;line-height:1;padding:3px 8px;border-radius:10px;border:none;
+  background:rgba(255,255,255,.14);color:inherit;opacity:.82;transition:opacity .15s}
+.me .edit-toggle{background:rgba(255,255,255,.2)}
+.edit-toggle:hover{opacity:1}
+.edit-toggle i{font-size:9px}
+.edit-toggle.open{opacity:1}
+.edit-detail{margin-top:7px;padding:8px 10px;border-radius:12px;
+  background:rgba(0,0,0,.28);font-size:13.5px;line-height:1.4}
+.me .edit-detail{background:rgba(0,0,0,.22)}
+.edit-row{display:block}
+.edit-row+.edit-row{margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.12)}
+.edit-lbl{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;
+  opacity:.6;margin-bottom:3px}
+.edit-orig,.edit-fin{white-space:pre-wrap}
+.diff-del{background:rgba(255,69,58,.3);color:#ffb3ad;text-decoration:line-through;border-radius:3px;padding:0 2px}
+.diff-ins{background:rgba(48,209,88,.32);color:#a6f5b6;border-radius:3px;padding:0 2px}
+.retract-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;opacity:.75;font-style:italic}
+.retract-tag i{font-size:10px}
+.bubble.retracted{opacity:.85}
+
+/* ---------- Live: Einblend-Transition für neu hinzugekommene Zeilen ---------- */
+@keyframes rowAppear { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+.row.row-fresh{ animation:rowAppear .45s ease both; }
+
+/* ---------- "Bearbeitet"-Modus (In-Place-Umschaltung im Chat-Bereich) ---------- */
+.pill.edit-filter{cursor:pointer}
+.pill.edit-filter.on{background:rgba(58,155,255,.28);color:#cfe6ff;box-shadow:inset 0 0 0 1px rgba(58,155,255,.6)}
+/* Im Bearbeitet-Modus zeigt die Heatmap (Verteilung ALLER Nachrichten) nichts
+   Sinnvolles -> Datums-/Heatmap-Panel ausblenden. */
+body.edit-mode #daypanel{display:none !important}
+
+/* ---------- Eigenes Tooltip (sofort sichtbar, statt native title-Verzögerung) ---------- */
+#mv-tip{position:fixed;z-index:9999;pointer-events:none;background:#1c1c24;color:#f2f2f7;
+  font-size:12px;line-height:1.3;padding:6px 9px;border-radius:8px;max-width:280px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.12);
+  opacity:0;transition:opacity .12s ease;white-space:pre-line}
+#mv-tip.show{opacity:1}
+
+/* Markierter/ausgewählter Text: einfach weiß (gut lesbar über farbigen Bubbles/Diffs) */
+::selection{ color:#fff; background:rgba(58,155,255,.45); }
+::-moz-selection{ color:#fff; background:rgba(58,155,255,.45); }
+
+/* ---------- Index: Live-Feed vs. statischer Import (Badge je Karte) ---------- */
+.feedline{margin:6px 0 2px}
+.feedbadge{display:inline-flex;align-items:center;gap:6px;font-size:11px;
+  padding:3px 9px;border-radius:9px;font-weight:600}
+.feedbadge.live{background:rgba(48,209,88,.16);color:#5fe084;border:1px solid rgba(48,209,88,.35)}
+.feedbadge.static{background:rgba(255,255,255,.06);color:#a8a8b0;border:1px solid rgba(255,255,255,.12)}
+.feedbadge .livedot{width:8px;height:8px;border-radius:50%;background:#30d158;
+  box-shadow:0 0 0 0 rgba(48,209,88,.6);animation:livePulse 1.8s ease-out infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(48,209,88,.55)}70%{box-shadow:0 0 0 7px rgba(48,209,88,0)}100%{box-shadow:0 0 0 0 rgba(48,209,88,0)}}
+
+/* ---------- Index: NEU-Badge bei live eingehenden Nachrichten ---------- */
+.card{position:relative}
+/* runder roter Zähler oben rechts in der Ecke, keine Karten-Outline */
+.card .newbadge{position:absolute;top:8px;right:8px;z-index:3;min-width:20px;height:20px;
+  display:flex;align-items:center;justify-content:center;
+  background:#ff3b30;color:#fff;font-size:11px;font-weight:700;
+  padding:0 6px;border-radius:11px;
+  box-shadow:0 2px 8px rgba(255,59,48,.5);animation:newPulse 1.6s ease-out infinite}
+.card .newbadge[hidden]{display:none}
+@keyframes newPulse{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+
+/* DB-Verbindungsverlust: dezenter Hinweis auf Live-Karten */
+.card .offlinebadge{position:absolute;top:8px;left:8px;z-index:3;
+  display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;
+  padding:3px 8px;border-radius:9px;background:rgba(255,159,10,.18);color:#ffb340;
+  border:1px solid rgba(255,159,10,.4)}
+.card .offlinebadge i{font-size:9px}
