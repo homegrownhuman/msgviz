@@ -241,6 +241,11 @@ Schema and API are not yet guaranteed to be stable.
 Three wrappers preset it for you:
 
 <table width="100%">
+  <colgroup>
+    <col width="30%">
+    <col width="20%">
+    <col width="50%">
+  </colgroup>
   <tr>
     <th align="left">Wrapper</th>
     <th align="left"><code>MSGVIZ_HOME</code></th>
@@ -312,7 +317,11 @@ Deep architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Docs
 
 <table width="100%">
-  <tr><td width="32%"><a href="docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a></td><td>Linear walkthrough — clone → demo → own archive</td></tr>
+  <colgroup>
+    <col width="35%">
+    <col width="65%">
+  </colgroup>
+  <tr><td><a href="docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a></td><td>Linear walkthrough — clone → demo → own archive</td></tr>
   <tr><td><a href="docs/CLI.md">docs/CLI.md</a></td><td>All <code>msgviz</code> subcommands with examples</td></tr>
   <tr><td><a href="docs/API.md">docs/API.md</a></td><td>HTTP API reference (REST + WebSocket)</td></tr>
   <tr><td><a href="docs/SCHEMA.md">docs/SCHEMA.md</a></td><td>SQLite tables, conventions, migration policy</td></tr>
