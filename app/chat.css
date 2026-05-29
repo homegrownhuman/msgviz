@@ -467,6 +467,23 @@ img.lazyloaded{background:none;min-height:0;min-width:0;color:inherit;
 .mo-empty{color:var(--sub);font-style:italic;padding:30px;text-align:center}
 
 /* ---------- Index-Startseite ---------- */
+/* ---------- Schema-drift banner ---------- */
+.drift-banner{max-width:920px;margin:18px auto 0;border-radius:12px;
+  padding:12px 16px;font-size:13px;border:1px solid;}
+.drift-banner.drift-warn{background:rgba(255,196,0,.08);border-color:rgba(255,196,0,.4);color:#ffd24d}
+.drift-banner.drift-fatal{background:rgba(255,69,58,.10);border-color:rgba(255,69,58,.5);color:#ff6b60}
+.drift-head{display:flex;align-items:center;gap:8px;font-weight:600}
+.drift-head .drift-src{color:var(--sub);font-weight:400;font-size:12px}
+.drift-toggle{margin-left:auto;background:transparent;border:1px solid currentColor;
+  color:inherit;border-radius:7px;padding:2px 10px;font-size:12px;cursor:pointer;opacity:.85}
+.drift-toggle:hover{opacity:1}
+.drift-list{display:none;list-style:none;margin:10px 0 0;padding:0}
+.drift-banner.open .drift-list{display:block}
+.drift-list li{padding:6px 0;border-top:1px solid rgba(255,255,255,.08)}
+.drift-detail{color:var(--sub);font-size:12px;margin-top:2px}
+.drift-hint{color:var(--sub)}
+.drift-hint code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px}
+
 .index-wrap{max-width:920px;margin:0 auto;padding:30px 18px 80px}
 .index-head{text-align:center;margin-bottom:26px}
 .index-head h1{font-size:24px;margin:0 0 6px;display:flex;align-items:center;justify-content:center;gap:10px}

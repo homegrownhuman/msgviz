@@ -522,6 +522,51 @@ def _register_api_routes(app: FastAPI, state: ServerState) -> None:
         con.close()
         return JSONResponse({"media": items})
 
+    @app.get("/api/drift")
+    def api_drift(all: bool = False):
+        """Pending (or all) schema-drift events + a pending count.
+
+        Read-only: the server opens the DB with mode=ro, so we never
+        create the drift_event table here — if it doesn't exist yet
+        (no import has ever recorded drift) we just report zero.
+        """
+        con = state.db()
+        try:
+            has_table = con.execute(
+                "SELECT 1 FROM sqlite_master "
+                "WHERE type='table' AND name='drift_event'"
+            ).fetchone() is not None
+            if not has_table:
+                return JSONResponse({"events": [], "pending_count": 0})
+
+            where = "" if all else "WHERE acknowledged_at IS NULL"
+            rows = con.execute(
+                f"""SELECT id, source, severity, kind, table_name, column_name,
+                           observed, expected, detail, occurrence_count,
+                           first_seen, last_seen, acknowledged_at
+                    FROM drift_event {where}
+                    ORDER BY last_seen DESC, id DESC""",
+            ).fetchall()
+            pending = con.execute(
+                "SELECT COUNT(*) FROM drift_event WHERE acknowledged_at IS NULL"
+            ).fetchone()[0]
+            events = [
+                {
+                    "id": r["id"], "source": r["source"],
+                    "severity": r["severity"], "kind": r["kind"],
+                    "table": r["table_name"], "column": r["column_name"],
+                    "observed": r["observed"], "expected": r["expected"],
+                    "detail": r["detail"],
+                    "occurrence_count": r["occurrence_count"],
+                    "first_seen": r["first_seen"], "last_seen": r["last_seen"],
+                    "acknowledged_at": r["acknowledged_at"],
+                }
+                for r in rows
+            ]
+            return JSONResponse({"events": events, "pending_count": pending})
+        finally:
+            con.close()
+
     @app.get("/api/chat/{slug:path}/days")
     def api_days(slug: str):
         con = state.db()

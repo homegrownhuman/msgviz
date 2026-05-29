@@ -96,7 +96,47 @@ function loadIndex(){
   });
 }
 
-loadIndex().then(function(ix){
+// Schema-drift banner: ask the API whether any source's on-disk schema
+// changed (Apple/Meta). Best-effort — static/file:// serving has no API,
+// so this silently no-ops there.
+function loadDrift(){
+  return fetch(mvUrl('/api/drift')).then(function(r){
+    if(!r.ok) throw new Error('no-api');
+    return r.json();
+  }).catch(function(){ return {events:[], pending_count:0}; });
+}
+
+function renderDriftBanner(d){
+  if(!d || !d.pending_count){ return ''; }
+  var fatal = (d.events||[]).filter(function(e){return e.severity==='fatal';});
+  var sources = {};
+  (d.events||[]).forEach(function(e){ if(!e.acknowledged_at) sources[e.source]=1; });
+  var srcList = Object.keys(sources).join(', ');
+  var cls = fatal.length ? 'drift-banner drift-fatal' : 'drift-banner drift-warn';
+  var icon = fatal.length ? 'fa-circle-exclamation' : 'fa-triangle-exclamation';
+  var head = fatal.length
+    ? (fatal.length+' source(s) cannot ingest — schema changed')
+    : (d.pending_count+' schema-drift warning(s)');
+  var rows = (d.events||[]).slice(0,8).map(function(e){
+    var where = [e.table, e.column].filter(Boolean).join('.');
+    return '<li><b>'+esc(e.source)+'</b> · '+esc(e.kind)+
+           (where?(' · '+esc(where)):'')+
+           (e.occurrence_count>1?(' ×'+e.occurrence_count):'')+
+           '<div class="drift-detail">'+esc(e.detail||'')+'</div></li>';
+  }).join('');
+  return '<div class="'+cls+'">'+
+    '<div class="drift-head"><i class="fa-solid '+icon+'"></i> '+esc(head)+
+      ' <span class="drift-src">'+esc(srcList)+'</span>'+
+      '<button class="drift-toggle" onclick="this.closest(\'.drift-banner\').classList.toggle(\'open\')">details</button>'+
+    '</div>'+
+    '<ul class="drift-list">'+rows+
+      '<li class="drift-hint">Review on the CLI: <code>msgviz drift</code> · acknowledge with <code>msgviz drift --ack-all</code></li>'+
+    '</ul></div>';
+}
+
+Promise.all([loadIndex(), loadDrift()]).then(function(results){
+  var ix = results[0];
+  var drift = results[1];
   var chats=ix.chats||[];
   var devices=ix.devices||[];
   var totalMsgs=chats.reduce(function(a,c){return a+c.total;},0);
@@ -152,6 +192,7 @@ loadIndex().then(function(ix){
                (multiDevice?(' · '+devices.length+' devices'):'');
 
   document.body.innerHTML=
+    renderDriftBanner(drift)+
     '<div class="index-wrap">'+
       '<div class="index-head"><h1><i class="fa-solid fa-comments"></i> '+headTitle+'</h1>'+
         '<div class="meta">'+headMeta+'</div></div>'+
