@@ -66,3 +66,34 @@ def db_file() -> Path:
 
 def schema_sql() -> Path:
     return _THIS.parent / "core" / "schema.sql"
+
+
+# --- External source locations (not under MSGVIZ_HOME) ----------------------
+# These point at *other apps'* data on the same machine — Apple's
+# Messages, WhatsApp Desktop — which msgviz reads but never writes.
+
+def whatsapp_container() -> Path:
+    """macOS WhatsApp Desktop shared container directory.
+
+    Holds ChatStorage.sqlite, ContactsV2.sqlite, and the decoded
+    Message/Media/ tree. Path is fixed by Apple's group-container
+    naming; only exists on macOS with WhatsApp Desktop installed.
+    """
+    return (
+        Path.home()
+        / "Library" / "Group Containers"
+        / "group.net.whatsapp.WhatsApp.shared"
+    )
+
+
+def whatsapp_db_path() -> Path:
+    """Default path to WhatsApp Desktop's ChatStorage.sqlite (macOS)."""
+    return whatsapp_container() / "ChatStorage.sqlite"
+
+
+def whatsapp_media_root() -> Path:
+    """Root of WhatsApp's on-disk decoded media tree.
+
+    ZWAMEDIAITEM.ZMEDIALOCALPATH values are relative to this directory.
+    """
+    return whatsapp_container() / "Message" / "Media"
