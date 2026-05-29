@@ -22,8 +22,9 @@ def chats(
         help="Only show chats whose title or JID contains this text.",
     ),
     min_messages: int = typer.Option(
-        0, "--min-messages", "-m",
-        help="Only show chats with at least this many messages.",
+        10, "--min-messages", "-m",
+        help="Only show chats with at least this many messages "
+             "(default 10; pass -m 0 to show every chat).",
     ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:

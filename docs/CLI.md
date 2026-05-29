@@ -254,11 +254,16 @@ setup**. Needs no device, no msgviz archive; it just reads the on-disk
 macOS only by default; pass `--db` elsewhere.
 
 ```bash
-msgviz whatsapp chats                       # all chats + message counts
-msgviz whatsapp chats --min-messages 10     # only chats with ≥ 10 messages
+msgviz whatsapp chats                       # chats with ≥ 10 messages (default)
+msgviz whatsapp chats -m 0                  # every chat, including tiny ones
+msgviz whatsapp chats --min-messages 50     # raise the threshold
 msgviz whatsapp chats --chat "Alice"        # filter by title/JID substring
 msgviz whatsapp chats --json                # machine-readable
 ```
+
+By default only chats with **≥ 10 messages** are shown, so the
+long tail of one-off chats doesn't drown out the real conversations.
+Pass `-m 0` to see everything.
 
 Typical flow: run this first, then
 [`msgviz import whatsapp-live`](#msgviz-import-whatsapp-live) with the

@@ -81,17 +81,31 @@ def test_no_selection_errors_and_points_to_discovery(home) -> None:
 
 def test_whatsapp_chats_lists_without_device(tmp_path, monkeypatch) -> None:
     # A bare MSGVIZ_HOME with NO initialized DB / device at all.
+    # Fixture chats have 4 messages each, below the default ≥10 filter,
+    # so pass -m 0 to see them all.
     monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
-    res = runner.invoke(app, ["whatsapp", "chats", "--db", str(WA_DB)])
+    res = runner.invoke(app, ["whatsapp", "chats", "-m", "0", "--db", str(WA_DB)])
     assert res.exit_code == 0
     assert "Alice" in res.stdout
     assert "Dev Team" in res.stdout
     assert "2 WhatsApp chat(s)" in res.stdout
 
 
+def test_whatsapp_chats_default_min_is_10(tmp_path, monkeypatch) -> None:
+    # Bare invocation applies the ≥10 default; the 4-msg fixture chats
+    # are hidden without the user passing anything.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, ["whatsapp", "chats", "--db", str(WA_DB)])
+    assert res.exit_code == 0
+    assert "Alice" not in res.stdout
+    assert "below the threshold" in res.stdout
+
+
 def test_whatsapp_chats_filter(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
-    res = runner.invoke(app, ["whatsapp", "chats", "--chat", "Alice", "--db", str(WA_DB)])
+    res = runner.invoke(app, [
+        "whatsapp", "chats", "--chat", "Alice", "-m", "0", "--db", str(WA_DB),
+    ])
     assert res.exit_code == 0
     assert "Alice" in res.stdout
     assert "Dev Team" not in res.stdout
@@ -100,7 +114,9 @@ def test_whatsapp_chats_filter(tmp_path, monkeypatch) -> None:
 def test_whatsapp_chats_json(tmp_path, monkeypatch) -> None:
     import json
     monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
-    res = runner.invoke(app, ["whatsapp", "chats", "--json", "--db", str(WA_DB)])
+    res = runner.invoke(app, [
+        "whatsapp", "chats", "--json", "-m", "0", "--db", str(WA_DB),
+    ])
     assert res.exit_code == 0
     data = json.loads(res.stdout)
     titles = {c["title"] for c in data["chats"]}
