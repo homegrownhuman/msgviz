@@ -242,23 +242,18 @@ Three wrappers preset it for you:
 
 <table width="100%">
   <!--
-    Invisible spacer row: forces the table's intrinsic max-content
-    width past the README article column (838px on a stock GitHub
-    layout). Without this, GitHub's `table { width: max-content }`
-    rule keeps the table narrow because every visible cell has short
-    content. The spacer cells use blank img sources sized to push the
-    total beyond the column, then width="100%" on the table clamps
-    it back to fill the container exactly.
+    Spacer images at the bottom of each <th>: a 1px-tall transparent
+    img with a fixed width forces the table's intrinsic max-content
+    width past the README article column (838px). That then triggers
+    width="100%" on the <table> to clamp it back to fill the column.
+    Without these spacers GitHub's `table { width: max-content }`
+    rule keeps the table at its natural content width (~577px for
+    short cells).
   -->
-  <tr style="height:0">
-    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="280" height="1" alt=""></td>
-    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="160" height="1" alt=""></td>
-    <td><img width="400" height="1" alt=""></td>
-  </tr>
   <tr>
-    <th align="left">Wrapper</th>
-    <th align="left"><code>MSGVIZ_HOME</code></th>
-    <th align="left">Purpose</th>
+    <th align="left">Wrapper<br><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="280" height="1" alt=""></th>
+    <th align="left"><code>MSGVIZ_HOME</code><br><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="160" height="1" alt=""></th>
+    <th align="left">Purpose<br><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="400" height="1" alt=""></th>
   </tr>
   <tr>
     <td><code>msgviz …</code></td>
@@ -326,14 +321,13 @@ Deep architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Docs
 
 <table width="100%">
-  <!-- Spacer row: forces table past max-content so width=100% kicks in.
-       See the comment on the Three Environments table above for why
-       this is needed. -->
-  <tr style="height:0">
-    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="320" height="1" alt=""></td>
-    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="520" height="1" alt=""></td>
+  <!-- Spacers inside the first <td>s force the table past max-content
+       so width=100% kicks in. Same technique as the Three Environments
+       header row above. -->
+  <tr>
+    <td><a href="docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a><br><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="320" height="1" alt=""></td>
+    <td>Linear walkthrough — clone → demo → own archive<br><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="520" height="1" alt=""></td>
   </tr>
-  <tr><td><a href="docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a></td><td>Linear walkthrough — clone → demo → own archive</td></tr>
   <tr><td><a href="docs/CLI.md">docs/CLI.md</a></td><td>All <code>msgviz</code> subcommands with examples</td></tr>
   <tr><td><a href="docs/API.md">docs/API.md</a></td><td>HTTP API reference (REST + WebSocket)</td></tr>
   <tr><td><a href="docs/SCHEMA.md">docs/SCHEMA.md</a></td><td>SQLite tables, conventions, migration policy</td></tr>
