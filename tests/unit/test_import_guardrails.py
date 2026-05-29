@@ -107,6 +107,37 @@ def test_whatsapp_chats_json(tmp_path, monkeypatch) -> None:
     assert titles == {"Alice", "Dev Team"}
 
 
+def test_whatsapp_chats_min_messages_excludes_below(tmp_path, monkeypatch) -> None:
+    # Fixture chats have 4 messages each → --min-messages 10 shows none.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, [
+        "whatsapp", "chats", "--min-messages", "10", "--db", str(WA_DB),
+    ])
+    assert res.exit_code == 0
+    assert "Alice" not in res.stdout
+    assert "below the threshold" in res.stdout
+
+
+def test_whatsapp_chats_min_messages_includes_at_threshold(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, [
+        "whatsapp", "chats", "-m", "4", "--db", str(WA_DB),
+    ])
+    assert res.exit_code == 0
+    assert "Alice" in res.stdout
+    assert "Dev Team" in res.stdout
+
+
+def test_whatsapp_chats_min_messages_json_filters(tmp_path, monkeypatch) -> None:
+    import json
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, [
+        "whatsapp", "chats", "-m", "10", "--json", "--db", str(WA_DB),
+    ])
+    assert res.exit_code == 0
+    assert json.loads(res.stdout)["chats"] == []
+
+
 # ---------------------------------------------------------------------------
 # Interactive device creation on import
 # ---------------------------------------------------------------------------

@@ -255,6 +255,7 @@ macOS only by default; pass `--db` elsewhere.
 
 ```bash
 msgviz whatsapp chats                       # all chats + message counts
+msgviz whatsapp chats --min-messages 10     # only chats with ≥ 10 messages
 msgviz whatsapp chats --chat "Alice"        # filter by title/JID substring
 msgviz whatsapp chats --json                # machine-readable
 ```

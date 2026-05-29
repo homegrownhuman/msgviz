@@ -21,6 +21,10 @@ def chats(
         None, "--chat", "-c",
         help="Only show chats whose title or JID contains this text.",
     ),
+    min_messages: int = typer.Option(
+        0, "--min-messages", "-m",
+        help="Only show chats with at least this many messages.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """List the chats in your WhatsApp Desktop database.
@@ -52,16 +56,29 @@ def chats(
         die(f"Could not read WhatsApp DB: {e}")
 
     rows = sorted(result["chats"], key=lambda c: c["total"], reverse=True)
+    total_found = len(rows)
+    if min_messages > 0:
+        rows = [c for c in rows if c["total"] >= min_messages]
 
     if json_out:
         console.print_json(data={"chats": rows})
         return
 
     if not rows:
-        console.print("[dim]No chats found.[/dim]")
+        if min_messages > 0 and total_found:
+            console.print(
+                f"[dim]No chats with ≥ {min_messages} messages "
+                f"({total_found} chat(s) below the threshold).[/dim]"
+            )
+        else:
+            console.print("[dim]No chats found.[/dim]")
         return
 
-    console.print(f"[bold]{len(rows)} WhatsApp chat(s):[/bold]\n")
+    suffix = (
+        f" with ≥ {min_messages} messages "
+        f"(of {total_found})" if min_messages > 0 else ""
+    )
+    console.print(f"[bold]{len(rows)} WhatsApp chat(s){suffix}:[/bold]\n")
     for c in rows:
         kind = "group" if c["is_group"] else "1:1"
         console.print(
