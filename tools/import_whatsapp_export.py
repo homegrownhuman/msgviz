@@ -160,16 +160,16 @@ def import_export(export_dir, device_slug, chat_slug, me_name=None,
                   limit=None, with_media=True, reporter=None):
     txt = os.path.join(export_dir, "_chat.txt")
     if not os.path.isfile(txt):
-        sys.exit(f"_chat.txt nicht gefunden in {export_dir}")
+        sys.exit(f"_chat.txt not found in {export_dir}")
     if not os.path.exists(DB):
-        sys.exit("visualizer.db fehlt – erst migrate.py laufen lassen.")
+        sys.exit("visualizer.db not found — run `msgviz init` first.")
 
     if reporter is None:
         from msgviz.core.progress import make_reporter
         reporter = make_reporter("null")
 
-    # --- Phase 1: Quelle parsen --------------------------------------------
-    with reporter.phase("Quelle parsen") as ph_parse:
+    # --- Phase 1: parse the source export ----------------------------------
+    with reporter.phase("Parse source") as ph_parse:
         ex.load_config_if_needed = None  # noop
         # sources.json is optional: if the device is registered via the
         # DB (`msgviz device add`) and not declared in sources.json,
@@ -208,19 +208,19 @@ def import_export(export_dir, device_slug, chat_slug, me_name=None,
         )
         chat_spec = next(iter(adapter.list_chats()))
         msgs_canonical = list(adapter.iter_messages(chat_spec))
-        ph_parse.note(f"{len(msgs_canonical)} echte Nachrichten")
+        ph_parse.note(f"{len(msgs_canonical)} real messages")
         ph_parse.set_total(len(msgs_canonical))
         ph_parse.tick(len(msgs_canonical))
 
-    # --- Phase 2: DB-Vorbereitung ------------------------------------------
-    with reporter.phase("DB-Vorbereitung") as ph_db:
+    # --- Phase 2: prepare the DB -------------------------------------------
+    with reporter.phase("Prepare DB") as ph_db:
         con = sqlite3.connect(DB)
         con.row_factory = sqlite3.Row
         dev_row = con.execute("SELECT id, owner_person_id FROM device WHERE slug=?",
                               (device_slug,)).fetchone()
         if dev_row is None:
             con.close()
-            sys.exit(f"Device-Zeile '{device_slug}' fehlt in der DB")
+            sys.exit(f"device '{device_slug}' not found in the DB")
         device_id, owner_pid = dev_row["id"], dev_row["owner_person_id"]
         from msgviz.core.person_resolver import PersonResolver
         resolver = PersonResolver(con)
@@ -233,14 +233,14 @@ def import_export(export_dir, device_slug, chat_slug, me_name=None,
             con.execute("DELETE FROM message WHERE chat_id=?", (oid,))
             con.execute("DELETE FROM chat_participant WHERE chat_id=?", (oid,))
             con.execute("DELETE FROM chat WHERE id=?", (oid,))
-            ph_db.note(f"alter Chat #{oid} entfernt (Re-Import)")
+            ph_db.note(f"removed old chat #{oid} (re-import)")
 
         chat_id = con.execute(
             """INSERT INTO chat(slug,device_id,title,subtitle,is_group,origin)
                VALUES(?,?,?,?,0,?)""",
             (slug, device_id, title, subtitle, origin)).lastrowid
 
-    # --- Phase 3: Nachrichten + Medien schreiben ---------------------------
+    # --- Phase 3: write messages + media -----------------------------------
     if with_media:
         ex.ensure_dirs(slug)
     st = ex.new_stats()
@@ -248,7 +248,7 @@ def import_export(export_dir, device_slug, chat_slug, me_name=None,
     n_media = 0
     use = msgs_canonical if limit is None else msgs_canonical[:limit]
 
-    with reporter.phase("Nachrichten + Medien schreiben", total=len(use)) as ph_write:
+    with reporter.phase("Write messages + media", total=len(use)) as ph_write:
         for cm in use:
             sender_pid = owner_pid if cm.is_me else resolver.resolve_name(cm.sender_raw)
             participants.add(sender_pid)
@@ -292,13 +292,13 @@ def import_export(export_dir, device_slug, chat_slug, me_name=None,
                     (msg_id, typ, rel, cat, portrait, nbytes))
                 n_media += 1
                 if n_media % 50 == 0:
-                    ph_write.note(f"{n_media} Medien")
+                    ph_write.note(f"{n_media} media")
 
             ph_write.tick()
             if ph_write._state.current % 1000 == 0:
                 con.commit()
 
-        ph_write.note(f"{ph_write._state.current} Nachrichten · {n_media} Medien")
+        ph_write.note(f"{ph_write._state.current} messages · {n_media} media")
 
     for pid in participants:
         con.execute("INSERT OR IGNORE INTO chat_participant(chat_id,person_id) VALUES(?,?)",
@@ -309,45 +309,45 @@ def import_export(export_dir, device_slug, chat_slug, me_name=None,
 
 
 def transcribe_chat(slug, reporter=None):
-    """Ruft die inkrementelle Transkription für genau diesen Chat auf."""
+    """Run the incremental transcription pass for this one chat."""
     try:
         from importlib import import_module
         tr = import_module("workers.transcribe")
     except Exception as e:
         if reporter:
-            with reporter.phase("Transkription"):
-                reporter._stack[-1].notes.append(f"übersprungen: {e}")
+            with reporter.phase("Transcription"):
+                reporter._stack[-1].notes.append(f"skipped: {e}")
         else:
-            print(f"  (Transkription übersprungen: {e})")
+            print(f"  (transcription skipped: {e})")
         return
     if reporter:
-        with reporter.phase("Transkription") as ph:
+        with reporter.phase("Transcription") as ph:
             ph.note(f"chat={slug}")
             try:
                 tr.run(chat=slug, reporter_phase=ph)
             except TypeError:
-                # älterer worker ohne reporter-arg
+                # older worker without the reporter argument
                 tr.run(chat=slug)
             except Exception as e:
-                ph.note(f"Fehler: {e}")
+                ph.note(f"error: {e}")
     else:
-        print(f"\nTranskribiere Sprachnachrichten in {slug} …")
+        print(f"\nTranscribing voice notes in {slug} …")
         try: tr.run(chat=slug)
-        except Exception as e: print(f"  Fehler: {e}")
+        except Exception as e: print(f"  error: {e}")
 
 
 def ocr_chat(slug, reporter=None):
-    """OCR über alle Bilder dieses Chats."""
+    """OCR over every image in this chat."""
     try:
         from importlib import import_module
         oc = import_module("workers.ocr_images")
     except Exception as e:
         if reporter:
-            with reporter.phase("OCR Bilder") as ph:
-                ph.note(f"übersprungen: {e}")
+            with reporter.phase("OCR images") as ph:
+                ph.note(f"skipped: {e}")
         return
     if reporter:
-        with reporter.phase("OCR Bilder") as ph:
+        with reporter.phase("OCR images") as ph:
             ph.note(f"chat={slug}")
             try:
                 oc.run(chat=slug, reporter_phase=ph)
