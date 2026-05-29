@@ -129,17 +129,68 @@ each missing piece would unlock. Full inventory (Python packages,
 system bins, frontend libraries, models) in
 [**docs/STACK.md**](docs/STACK.md).
 
-| Component | Required for | Install (macOS) | Install (Linux) |
-|---|---|---|---|
-| Python ≥ 3.10                       | Everything                       | `brew install python@3.12`                 | `apt install python3.12 python3.12-venv` |
-| fastapi, uvicorn, typer, rich       | Server + CLI                     | `pip install -e .` (auto)                  | `pip install -e .` (auto)                |
-| Pillow                              | Image thumbnails, demo asset gen | `pip install -e '.[dev]'`                  | `pip install -e '.[dev]'`                |
-| ffmpeg                              | Voice note conversion            | `brew install ffmpeg`                      | `apt install ffmpeg`                     |
-| [whisper.cpp](https://github.com/ggerganov/whisper.cpp) `whisper-cli` | Audio transcription              | `brew install whisper-cpp`                 | build from source                        |
-| Whisper model (`ggml-large-v3.bin`) | Audio transcription              | curl from huggingface (~3 GB)              | same                                     |
-| macOS Vision binary                 | Screenshot OCR (best quality)    | `swiftc -O tools/ocr/ocr.swift -o tools/ocr/ocr` | n/a                                |
-| Tesseract                           | Screenshot OCR (cross-platform)  | `brew install tesseract` + `pip install 'msgviz[ocr-tesseract]'` | `apt install tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu` + `pip install 'msgviz[ocr-tesseract]'` |
-| Full-Disk-Access for the terminal   | Live iMessage sync (macOS only)  | System Settings → Privacy & Security       | n/a                                      |
+<table width="100%">
+  <tr>
+    <th align="left">Component</th>
+    <th align="left">Required for</th>
+    <th align="left">Install (macOS)</th>
+    <th align="left">Install (Linux)</th>
+  </tr>
+  <tr>
+    <td>Python ≥ 3.10</td>
+    <td>Everything</td>
+    <td><code>brew install python@3.12</code></td>
+    <td><code>apt install python3.12 python3.12-venv</code></td>
+  </tr>
+  <tr>
+    <td>fastapi, uvicorn, typer, rich</td>
+    <td>Server + CLI</td>
+    <td><code>pip install -e .</code> (auto)</td>
+    <td><code>pip install -e .</code> (auto)</td>
+  </tr>
+  <tr>
+    <td>Pillow</td>
+    <td>Image thumbnails, demo asset gen</td>
+    <td><code>pip install -e '.[dev]'</code></td>
+    <td><code>pip install -e '.[dev]'</code></td>
+  </tr>
+  <tr>
+    <td>ffmpeg</td>
+    <td>Voice note conversion</td>
+    <td><code>brew install ffmpeg</code></td>
+    <td><code>apt install ffmpeg</code></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/ggerganov/whisper.cpp">whisper.cpp</a> <code>whisper-cli</code></td>
+    <td>Audio transcription</td>
+    <td><code>brew install whisper-cpp</code></td>
+    <td>build from source</td>
+  </tr>
+  <tr>
+    <td>Whisper model (<code>ggml-large-v3.bin</code>)</td>
+    <td>Audio transcription</td>
+    <td>curl from huggingface (~3 GB)</td>
+    <td>same</td>
+  </tr>
+  <tr>
+    <td>macOS Vision binary</td>
+    <td>Screenshot OCR (best quality)</td>
+    <td><code>swiftc -O tools/ocr/ocr.swift -o tools/ocr/ocr</code></td>
+    <td>n/a</td>
+  </tr>
+  <tr>
+    <td>Tesseract</td>
+    <td>Screenshot OCR (cross-platform)</td>
+    <td><code>brew install tesseract</code> + <code>pip install 'msgviz[ocr-tesseract]'</code></td>
+    <td><code>apt install tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu</code> + <code>pip install 'msgviz[ocr-tesseract]'</code></td>
+  </tr>
+  <tr>
+    <td>Full-Disk-Access for the terminal</td>
+    <td>Live iMessage sync (macOS only)</td>
+    <td>System Settings → Privacy & Security</td>
+    <td>n/a</td>
+  </tr>
+</table>
 
 Anything not installed *degrades* the corresponding feature; the rest
 of msgviz still runs. The server, both importers (WhatsApp, iMessage
@@ -181,24 +232,60 @@ Schema and API are not yet guaranteed to be stable.
 `MSGVIZ_HOME` decides which directory holds the DB, media, and config.
 Three wrappers preset it for you:
 
-| Wrapper                       | `MSGVIZ_HOME` | Purpose                                  |
-|-------------------------------|---------------|------------------------------------------|
-| `msgviz …`                    | `data/`       | Your live archive                        |
-| `./scripts/msgviz-dev …`      | `dev/`        | Throwaway sandbox                        |
-| `./scripts/msgviz-demo …`     | `demo/`       | Bundled showcase dataset                 |
+<table width="100%">
+  <tr>
+    <th align="left">Wrapper</th>
+    <th align="left"><code>MSGVIZ_HOME</code></th>
+    <th align="left">Purpose</th>
+  </tr>
+  <tr>
+    <td><code>msgviz …</code></td>
+    <td><code>data/</code></td>
+    <td>Your live archive</td>
+  </tr>
+  <tr>
+    <td><code>./scripts/msgviz-dev …</code></td>
+    <td><code>dev/</code></td>
+    <td>Throwaway sandbox</td>
+  </tr>
+  <tr>
+    <td><code>./scripts/msgviz-demo …</code></td>
+    <td><code>demo/</code></td>
+    <td>Bundled showcase dataset</td>
+  </tr>
+</table>
 
 The demo lives entirely in `demo/`. Experiments live entirely in `dev/`.
 Nothing leaks into your live `data/` without your explicit say-so.
 
 ## Supported sources today
 
-| Source | Status |
-|---|---|
-| **iMessage live** (macOS, `~/Library/Messages/chat.db`) | ✅ incremental sync + live push |
-| **iMessage backup** (iOS backup in MobileSync folder) | ✅ |
-| **WhatsApp export** (`_chat.txt` + attachments, iOS and Android format) | ✅ German/English/Italian/Spanish/Dutch |
-| Signal | 🔜 adapter open for contributions |
-| Telegram | 🔜 ditto |
+<table width="100%">
+  <tr>
+    <th align="left">Source</th>
+    <th align="left">Status</th>
+  </tr>
+  <tr>
+    <td><b>iMessage live</b> (macOS, <code>~/Library/Messages/chat.db</code>)</td>
+    <td>✅ incremental sync + live push</td>
+  </tr>
+  <tr>
+    <td><b>iMessage backup</b> (iOS backup in MobileSync folder)</td>
+    <td>✅</td>
+  </tr>
+  <tr>
+    <td><b>WhatsApp export</b> (<code>_chat.txt</code> + attachments, iOS and Android format)</td>
+    <td>✅ German / English / Italian / Spanish / Dutch</td>
+  </tr>
+  <tr>
+    <td>Signal</td>
+    <td>🔜 adapter open for contributions</td>
+  </tr>
+  <tr>
+    <td>Telegram</td>
+    <td>🔜 ditto</td>
+  </tr>
+</table>
 
 ## Architecture in 5 sentences
 
@@ -216,24 +303,45 @@ Deep architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Docs
 
-| | |
-|---|---|
-| [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) | Linear walkthrough — clone → demo → own archive |
-| [docs/CLI.md](docs/CLI.md) | All `msgviz` subcommands with examples |
-| [docs/API.md](docs/API.md) | HTTP API reference (REST + WebSocket) |
-| [docs/SCHEMA.md](docs/SCHEMA.md) | SQLite tables, conventions, migration policy |
-| [docs/STACK.md](docs/STACK.md) | Full inventory of Python deps, system bins, frontend assets |
-| [docs/EMBEDDING.md](docs/EMBEDDING.md) | Mount Message Visualizer inside your own FastAPI app |
-| [docs/FRONTEND_KIT.md](docs/FRONTEND_KIT.md) | Drop the frontend into a different host |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deeper architecture |
+<table width="100%">
+  <tr><td width="32%"><a href="docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a></td><td>Linear walkthrough — clone → demo → own archive</td></tr>
+  <tr><td><a href="docs/CLI.md">docs/CLI.md</a></td><td>All <code>msgviz</code> subcommands with examples</td></tr>
+  <tr><td><a href="docs/API.md">docs/API.md</a></td><td>HTTP API reference (REST + WebSocket)</td></tr>
+  <tr><td><a href="docs/SCHEMA.md">docs/SCHEMA.md</a></td><td>SQLite tables, conventions, migration policy</td></tr>
+  <tr><td><a href="docs/STACK.md">docs/STACK.md</a></td><td>Full inventory of Python deps, system bins, frontend assets</td></tr>
+  <tr><td><a href="docs/EMBEDDING.md">docs/EMBEDDING.md</a></td><td>Mount Message Visualizer inside your own FastAPI app</td></tr>
+  <tr><td><a href="docs/FRONTEND_KIT.md">docs/FRONTEND_KIT.md</a></td><td>Drop the frontend into a different host</td></tr>
+  <tr><td><a href="docs/ARCHITECTURE.md">docs/ARCHITECTURE.md</a></td><td>Deeper architecture</td></tr>
+</table>
 
 ## Related tools
 
-| Tool | Focus | Stars | What Message Visualizer does differently |
-|---|---|---|---|
-| [ReagentX/imessage-exporter](https://github.com/ReagentX/imessage-exporter) | iMessage → text/HTML | 5.2k | viewer + multi-source + local transcription, not just export |
-| [KnugiHK/WhatsApp-Chat-Exporter](https://github.com/KnugiHK/WhatsApp-Chat-Exporter) | WhatsApp backups → HTML | 1.1k | merges WhatsApp and iMessage, dedupes by person |
-| [Pustur/whatsapp-chat-parser-website](https://github.com/Pustur/whatsapp-chat-parser-website) | WhatsApp export, browser-only | 264 | handles images + audio + transcription, multi-source |
+<table width="100%">
+  <tr>
+    <th align="left">Tool</th>
+    <th align="left">Focus</th>
+    <th align="left">Stars</th>
+    <th align="left">What Message Visualizer does differently</th>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/ReagentX/imessage-exporter">ReagentX/imessage-exporter</a></td>
+    <td>iMessage → text/HTML</td>
+    <td>5.2k</td>
+    <td>viewer + multi-source + local transcription, not just export</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/KnugiHK/WhatsApp-Chat-Exporter">KnugiHK/WhatsApp-Chat-Exporter</a></td>
+    <td>WhatsApp backups → HTML</td>
+    <td>1.1k</td>
+    <td>merges WhatsApp and iMessage, dedupes by person</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/Pustur/whatsapp-chat-parser-website">Pustur/whatsapp-chat-parser-website</a></td>
+    <td>WhatsApp export, browser-only</td>
+    <td>264</td>
+    <td>handles images + audio + transcription, multi-source</td>
+  </tr>
+</table>
 
 ## Privacy
 
