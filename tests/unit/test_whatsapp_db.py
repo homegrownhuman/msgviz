@@ -208,6 +208,48 @@ def test_unknown_message_type_warns_but_keeps_text_row(con) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Newer message types: deleted (14) + media (46/54/59/66)
+# ---------------------------------------------------------------------------
+
+def test_deleted_type_is_retracted_no_warn(con) -> None:
+    captured: list[drift.DriftEvent] = []
+    msgs = {m.external_id: m for m in
+            wadb.iter_canonical(con, 3, "Me", is_group=False,
+                                partner_name=None, on_drift=captured.append)}
+    # Type-14 tombstone kept as a retracted bubble.
+    assert "STANZA-403" in msgs
+    assert msgs["STANZA-403"].retracted is True
+    # Type 14 is a known type now → no unknown_enum_value warning for it.
+    assert not any(
+        e.kind == "unknown_enum_value" and e.observed == "14"
+        for e in captured
+    )
+
+
+def test_media_type_with_file_imports_no_warn(con) -> None:
+    captured: list[drift.DriftEvent] = []
+    msgs = {m.external_id: m for m in
+            wadb.iter_canonical(con, 3, "Me", is_group=False,
+                                partner_name=None, on_drift=captured.append)}
+    # Type-59 row that has a media file → imported with an attachment.
+    assert "STANZA-404" in msgs
+    assert len(msgs["STANZA-404"].attachments) == 1
+    # No enum warning for the now-known type 59.
+    assert not any(
+        e.kind == "unknown_enum_value" and e.observed == "59"
+        for e in captured
+    )
+
+
+def test_hollow_media_type_skipped(con) -> None:
+    # A type-59 row with no file, no text, no metadata is skipped (not a
+    # silent empty bubble, not a crash, not a warn).
+    msgs = {m.external_id: m for m in
+            wadb.iter_canonical(con, 3, "Me", is_group=False, partner_name=None)}
+    assert "STANZA-405" not in msgs
+
+
+# ---------------------------------------------------------------------------
 # Malformed row → row_parse_failed, not a crash
 # ---------------------------------------------------------------------------
 

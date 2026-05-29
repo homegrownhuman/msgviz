@@ -237,6 +237,15 @@ def build() -> Path:
             (401, 60,  1, 0, "reply from me",          "STANZA-401", None),
             (402, 120, 0, 0, "now from a @lid",        "STANZA-402",
              "71112223334445@lid"),
+            # Type 14 = deleted-message tombstone → retracted, kept.
+            (403, 180, 0, 14, None,                    "STANZA-403",
+             "491700000009@s.whatsapp.net"),
+            # Type 59 = newer media variant; this one HAS a file → import.
+            (404, 240, 0, 59, None,                    "STANZA-404",
+             "491700000009@s.whatsapp.net"),
+            # Type 59 with NO file (hollow) → skipped silently, no warn.
+            (405, 300, 0, 59, None,                    "STANZA-405",
+             "491700000009@s.whatsapp.net"),
         ]
         for pk, off, is_me, mtype, text, stanza, from_jid in unnamed:
             core = BASE_CORE + off
@@ -248,6 +257,13 @@ def build() -> Path:
                    VALUES (?, 3, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)""",
                 (pk, is_me, mtype, text, core, core, from_jid, stanza, off),
             )
+        # media file for the type-59 message pk=404 (the one WITH a file).
+        # pk=405 deliberately gets NO ZWAMEDIAITEM → hollow, skipped.
+        con.execute(
+            """INSERT INTO ZWAMEDIAITEM
+               (Z_PK, ZMESSAGE, ZMEDIALOCALPATH, ZTITLE, ZFILESIZE)
+               VALUES (210, 404, 'Media/491700000009/newmedia.jpg', 'm.jpg', 1234)"""
+        )
 
         con.commit()
     finally:

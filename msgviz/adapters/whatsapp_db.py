@@ -241,11 +241,16 @@ def _build_canonical(
         sender_raw = partner_name or (row["from_jid"] or "")
 
     text = _clean_text(row["text"])
+    retracted = False
 
     # Media / attachments.
     attachments: list[Attachment] = []
     apps: list[str] = []
-    if kind in ("image", "video", "audio", "sticker", "gif", "file"):
+    if kind == "deleted":
+        # Deleted-message tombstone (ZMESSAGETYPE=14). No content to
+        # show; mark retracted so the UI renders it as removed.
+        retracted = True
+    elif kind in ("image", "video", "audio", "sticker", "gif", "file", "media"):
         media = _media_for_message(con, row["pk"])
         if media is not None and media["local_path"]:
             attachments.append(Attachment(
@@ -254,9 +259,15 @@ def _build_canonical(
                 filename=(media["title"] or "") if "title" in media.keys() else "",
                 is_sticker=(kind == "sticker"),
             ))
-        elif media is None:
-            # A media-typed message with no media row is odd but not
-            # fatal; keep it with a label so it isn't silently empty.
+        elif media is None and kind != "media":
+            # A typed media message with no media row at all: keep a
+            # label so it isn't silently empty. The generic "media"
+            # kind (newer ZMESSAGETYPE 46/54/59/66) is intentionally
+            # NOT labelled — those are usually hollow (no file, no text:
+            # view-once expired / undownloaded), so they fall through to
+            # the skip below rather than littering the chat with empty
+            # "📎 Attachment" bubbles. The ones that DO carry a file are
+            # handled by the attachment branch above.
             apps.append({
                 "image": "🖼️ Image",
                 "video": "🎬 Video",
@@ -281,8 +292,10 @@ def _build_canonical(
         if not text:
             return None
 
-    # Nothing to show? Skip (but text-only types always pass).
-    if not text and not attachments and not apps:
+    # Nothing to show? Skip — unless it's a retracted (deleted) message,
+    # which we keep as an empty retracted bubble. Text-only types always
+    # pass (they have text).
+    if not retracted and not text and not attachments and not apps:
         return None
 
     return CanonicalMessage(
@@ -291,7 +304,7 @@ def _build_canonical(
         sender_raw=sender_raw,
         is_me=is_me,
         text=text or None,
-        retracted=False,            # deletion handling is v2 (§5.5)
+        retracted=retracted,
         edits=[],
         reactions=[],               # reaction support is v2
         apps=apps,

@@ -479,23 +479,39 @@ def record_event(con: sqlite3.Connection, event: DriftEvent) -> None:
     # in production.
 
 
-def record_report(con: sqlite3.Connection, report: SchemaReport) -> int:
+def record_report(
+    con: sqlite3.Connection,
+    report: SchemaReport,
+    *,
+    log_events: bool = False,
+) -> int:
     """Persist every event from a :class:`SchemaReport`.
 
     Returns the number of events written (== ``len(report.events)``).
     Caller is expected to ``con.commit()`` afterwards as part of the
     surrounding transaction.
+
+    Args:
+        log_events: emit a WARN log line per event. Default False — the
+            DB dedups, but the *log* does not, so logging every event
+            during a bulk import floods the console with thousands of
+            duplicate lines (e.g. one per type-59 message). Callers that
+            want a record should log a deduped summary themselves (see
+            how the importer surfaces ``msgviz drift``). Kept as an
+            opt-in for the rare case a caller genuinely wants per-event
+            log output.
     """
     ensure_drift_event_table(con)
     n = 0
     for event in report.events:
-        log.warning(
-            "msgviz.drift source=%s kind=%s severity=%s table=%s "
-            "column=%s observed=%s schema_version=%s detail=%s",
-            event.source, event.kind, event.severity, event.table,
-            event.column, event.observed, report.schema_version,
-            event.detail,
-        )
+        if log_events:
+            log.warning(
+                "msgviz.drift source=%s kind=%s severity=%s table=%s "
+                "column=%s observed=%s schema_version=%s detail=%s",
+                event.source, event.kind, event.severity, event.table,
+                event.column, event.observed, report.schema_version,
+                event.detail,
+            )
         con.execute(
             """
             INSERT INTO drift_event (

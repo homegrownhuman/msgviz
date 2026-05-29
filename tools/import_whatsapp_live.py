@@ -280,9 +280,21 @@ def import_live(
     # Ensure the drift table exists so on_drift has somewhere to write.
     drift.ensure_drift_event_table(con)
 
-    # The drift sink: persist every event the adapter surfaces. Commit
-    # immediately so warn events survive even if a later phase fails.
+    # The drift sink. The drift_event table dedups by
+    # (source, kind, table, column, observed), but a bulk import can
+    # raise the SAME drift thousands of times (e.g. one per type-59
+    # message). We dedup in-memory so each distinct drift hits the DB
+    # once per run — no per-message INSERT, no per-message log line.
+    # A summary is printed at the end instead of a flood.
+    seen_drift: set[tuple] = set()
+    drift_kinds: dict[str, int] = {}
+
     def on_drift(event: drift.DriftEvent) -> None:
+        key = (event.kind, event.table, event.column, event.observed)
+        drift_kinds[event.kind] = drift_kinds.get(event.kind, 0) + 1
+        if key in seen_drift:
+            return
+        seen_drift.add(key)
         drift.record_report(
             con, drift.SchemaReport(schema_version=0, events=(event,))
         )
@@ -423,6 +435,11 @@ def import_live(
 
         con.commit()
 
+    # Distinct drift kinds seen during ingestion (the probe's structural
+    # warnings plus any per-row / enum drift). The DB has the deduped
+    # detail; here we just report how many distinct issues exist.
+    stats["drift_distinct"] = len(seen_drift)
+    stats["drift_kinds"] = dict(drift_kinds)
     con.close()
     adapter.close()
     return stats

@@ -68,6 +68,27 @@ MESSAGE_TYPE_DOCUMENT = 8
 MESSAGE_TYPE_STICKER = 10
 MESSAGE_TYPE_GIF = 15
 
+# Higher / newer ZMESSAGETYPE codes observed on modern WhatsApp Desktop
+# builds. These are NOT officially documented; the mapping below was
+# established by inspecting a real ChatStorage.sqlite (see the commit
+# that added them):
+#   14 — deleted-message tombstone ("This message was deleted").
+#        Confirmed against the KnugiHK/WhatsApp-Chat-Exporter iOS parser.
+#   46, 54, 59, 66 — media-bearing message variants. Each row joins a
+#        ZWAMEDIAITEM. In practice most carry NO local file / text /
+#        metadata (hollow media-item — e.g. view-once expired, sticker
+#        v2, or media never downloaded), so they render as a placeholder
+#        or skip; but some (e.g. a type-54 .mp4) are real downloadable
+#        media. We treat them as media so real files import, and the
+#        adapter's "nothing to show → skip" handles the empty ones.
+#        These are educated classifications, not protocol-documented;
+#        revisit if a future build repurposes the codes.
+MESSAGE_TYPE_DELETED = 14
+MESSAGE_TYPE_MEDIA_46 = 46
+MESSAGE_TYPE_MEDIA_54 = 54
+MESSAGE_TYPE_MEDIA_59 = 59
+MESSAGE_TYPE_MEDIA_66 = 66
+
 # code → canonical "kind" tag. The canonical model itself has no
 # explicit kind column; the adapter uses this to decide text vs media
 # vs system handling. Values are descriptive strings used internally
@@ -84,6 +105,11 @@ MESSAGE_KIND = {
     MESSAGE_TYPE_DOCUMENT: "file",
     MESSAGE_TYPE_STICKER: "sticker",
     MESSAGE_TYPE_GIF: "gif",
+    MESSAGE_TYPE_DELETED: "deleted",
+    MESSAGE_TYPE_MEDIA_46: "media",
+    MESSAGE_TYPE_MEDIA_54: "media",
+    MESSAGE_TYPE_MEDIA_59: "media",
+    MESSAGE_TYPE_MEDIA_66: "media",
 }
 
 KNOWN_MESSAGE_TYPES = set(MESSAGE_KIND.keys())
