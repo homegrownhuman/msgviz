@@ -45,10 +45,18 @@ cd msgviz
 bash scripts/setup.sh             # venv + pip install -e . + system-dep check + msgviz init
 source .venv/bin/activate
 
-# Declare your first person, device and chat
+# Declare your first person, device, and chat
 msgviz person add "Alice" --handles "alice@example.com,+491701234567"
-msgviz device add my_mac --name "My Mac" --type mac_live --owner "Alice"
-msgviz chat add my_mac --slug bob --title "Bob" --origin apple
+msgviz device add wa_archive --name "iPhone 14 (WhatsApp backup)" \
+                             --type static --owner "Alice"
+msgviz chat add wa_archive --slug bob --title "Bob" --origin whatsapp
+
+# Import the data — point at a WhatsApp chat export folder
+msgviz import whatsapp \
+    --device wa_archive \
+    --folder ~/Downloads/WhatsApp\ Chat\ -\ Bob \
+    --slug bob \
+    --me "Alice"
 
 msgviz status
 msgviz serve                      # → http://127.0.0.1:8753/
@@ -56,8 +64,18 @@ msgviz serve                      # → http://127.0.0.1:8753/
 
 `setup.sh` also checks for the optional system tools (`ffmpeg`,
 `whisper-cli`, OCR) and prints install hints for whatever's missing.
-For WhatsApp/iMessage backup import, avatars, and reverse-proxy
-setup, see [**docs/GETTING_STARTED.md**](docs/GETTING_STARTED.md).
+
+The import command emits a live progress tree: each phase shows a
+spinner while running, then a ✓ with item counts, duration, and the
+most recent status note. A finished 1,200-message import looks like
+this:
+
+![msgviz import whatsapp — live progress tree](docs/screenshots/import.svg)
+
+For iMessage backup imports, live iMessage sync (macOS), avatars,
+group chats, and reverse-proxy setup, see
+[**docs/GETTING_STARTED.md**](docs/GETTING_STARTED.md) and
+[**docs/CLI.md**](docs/CLI.md).
 
 ---
 
