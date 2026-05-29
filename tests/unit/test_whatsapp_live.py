@@ -209,3 +209,30 @@ def test_resolve_attachment_relative_uses_media_root(adapter, monkeypatch, tmp_p
     target.parent.mkdir(parents=True)
     target.write_bytes(b"\xff\xd8\xff")
     assert adapter.resolve_attachment(rel) == target
+
+
+def test_media_root_is_message_not_message_media() -> None:
+    # Regression for the "all attachments missing" bug: ZMEDIALOCALPATH
+    # values already start with "Media/…", and that Media segment IS the
+    # Message/Media dir. So the root must be <container>/Message, NOT
+    # <container>/Message/Media — otherwise the join doubles to
+    # …/Message/Media/Media/… and nothing resolves.
+    from msgviz import paths
+    root = paths.whatsapp_media_root()
+    assert root.name == "Message"
+    assert root.parent.name == "group.net.whatsapp.WhatsApp.shared"
+
+
+def test_resolve_attachment_does_not_double_media_segment(adapter, monkeypatch, tmp_path) -> None:
+    # Simulate the real layout: container/Message/Media/<jid>/.../file.jpg
+    # with a ZMEDIALOCALPATH of "Media/<jid>/.../file.jpg".
+    from msgviz import paths
+    message_dir = tmp_path / "Message"
+    monkeypatch.setattr(paths, "whatsapp_media_root", lambda: message_dir)
+    rel = "Media/34699@s.whatsapp.net/b/3/file.jpg"
+    target = message_dir / rel
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"\xff\xd8\xff")
+    got = adapter.resolve_attachment(rel)
+    assert got == target
+    assert "Media/Media" not in str(got)   # no doubled segment

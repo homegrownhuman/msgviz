@@ -92,8 +92,15 @@ def whatsapp_db_path() -> Path:
 
 
 def whatsapp_media_root() -> Path:
-    """Root of WhatsApp's on-disk decoded media tree.
+    """Root that ``ZWAMEDIAITEM.ZMEDIALOCALPATH`` is relative to.
 
-    ZWAMEDIAITEM.ZMEDIALOCALPATH values are relative to this directory.
+    The stored paths already begin with ``Media/…`` (e.g.
+    ``Media/<jid>/b/3/<uuid>.jpg``), and that ``Media`` segment **is**
+    the ``Message/Media`` directory — so the paths are relative to
+    ``<container>/Message``, NOT ``<container>/Message/Media``. Joining
+    against the latter doubles the segment
+    (``…/Message/Media/Media/…``) and nothing resolves. This is the
+    "all attachments missing" bug: the files are on disk, we were just
+    looking one directory too deep.
     """
-    return whatsapp_container() / "Message" / "Media"
+    return whatsapp_container() / "Message"
