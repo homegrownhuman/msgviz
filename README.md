@@ -241,11 +241,20 @@ Schema and API are not yet guaranteed to be stable.
 Three wrappers preset it for you:
 
 <table width="100%">
-  <colgroup>
-    <col width="30%">
-    <col width="20%">
-    <col width="50%">
-  </colgroup>
+  <!--
+    Invisible spacer row: forces the table's intrinsic max-content
+    width past the README article column (838px on a stock GitHub
+    layout). Without this, GitHub's `table { width: max-content }`
+    rule keeps the table narrow because every visible cell has short
+    content. The spacer cells use blank img sources sized to push the
+    total beyond the column, then width="100%" on the table clamps
+    it back to fill the container exactly.
+  -->
+  <tr style="height:0">
+    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="280" height="1" alt=""></td>
+    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="160" height="1" alt=""></td>
+    <td><img width="400" height="1" alt=""></td>
+  </tr>
   <tr>
     <th align="left">Wrapper</th>
     <th align="left"><code>MSGVIZ_HOME</code></th>
@@ -317,10 +326,13 @@ Deep architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Docs
 
 <table width="100%">
-  <colgroup>
-    <col width="35%">
-    <col width="65%">
-  </colgroup>
+  <!-- Spacer row: forces table past max-content so width=100% kicks in.
+       See the comment on the Three Environments table above for why
+       this is needed. -->
+  <tr style="height:0">
+    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="320" height="1" alt=""></td>
+    <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" width="520" height="1" alt=""></td>
+  </tr>
   <tr><td><a href="docs/GETTING_STARTED.md">docs/GETTING_STARTED.md</a></td><td>Linear walkthrough — clone → demo → own archive</td></tr>
   <tr><td><a href="docs/CLI.md">docs/CLI.md</a></td><td>All <code>msgviz</code> subcommands with examples</td></tr>
   <tr><td><a href="docs/API.md">docs/API.md</a></td><td>HTTP API reference (REST + WebSocket)</td></tr>
