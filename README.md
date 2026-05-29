@@ -87,11 +87,9 @@ Click into any chat for the timeline, the heatmap, the media overview,
 or the voice-notes browser (click a thumbnail for the full view):
 
 <p align="center">
-  <a href="docs/screenshots/page-chat.png" title="Chat + heatmap"><img src="docs/screenshots/page-chat.png" height="240" alt="Chat page with messages, voice notes, and side heatmap"></a>
-  &nbsp;
-  <a href="docs/screenshots/page-media.jpg" title="Media overview"><img src="docs/screenshots/page-media.jpg" height="240" alt="Media overview grid with photo thumbnails"></a>
-  &nbsp;
-  <a href="docs/screenshots/page-voice.png" title="Voice notes"><img src="docs/screenshots/page-voice.png" height="240" alt="Voice notes browser with inline playback"></a>
+  <a href="docs/screenshots/page-chat.png" title="Chat + heatmap"><img src="docs/screenshots/page-chat.png" width="32%" alt="Chat page with messages, voice notes, and side heatmap"></a>
+  <a href="docs/screenshots/page-media.jpg" title="Media overview"><img src="docs/screenshots/page-media.jpg" width="32%" alt="Media overview grid with photo thumbnails"></a>
+  <a href="docs/screenshots/page-voice.png" title="Voice notes"><img src="docs/screenshots/page-voice.png" width="32%" alt="Voice notes browser with inline playback"></a>
 </p>
 
 Your real archive under `data/` is not touched — see
