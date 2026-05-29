@@ -25,6 +25,24 @@ Apple's date format (`message.date` etc.) is in **nanoseconds since
 
 Total `message` row count: **8** (7 real + 1 tapback).
 
+### `sample_whatsapp.db`
+SQLite file in WhatsApp Desktop's `ChatStorage.sqlite` layout (the
+Core Data `ZWA*` tables, **not** the v2 schema). Drives the
+`whatsapp_live` adapter tests (`test_whatsapp_db.py`). Contains:
+
+- 2 chat sessions: a 1:1 (`ZSESSIONTYPE=0`, "Alice") and a group
+  (`ZSESSIONTYPE=1`, "Dev Team") with 2 `ZWAGROUPMEMBER` rows
+- 1:1: 4 messages (2 me / 2 Alice), one image + one voice note,
+  each with a `ZWAMEDIAITEM` row
+- group: 3 normal messages from Bob / Carol / me (sender resolved via
+  `ZWAGROUPMEMBER`, not the group JID) + 1 message with an unknown
+  `ZMESSAGETYPE` (=99) carrying text, to exercise the enum-drift path
+- declared column types use WhatsApp's real spellings (`TIMESTAMP`,
+  `VARCHAR`) so the drift probe's storage-class normalisation is tested
+
+WhatsApp's date format (`ZMESSAGEDATE` etc.) is in **seconds since
+2001-01-01 UTC** (unlike iMessage's nanoseconds).
+
 ### `sample_whatsapp/`
 WhatsApp export folder (in the format the WhatsApp app produces with
 "Export chat including media"):
@@ -52,6 +70,9 @@ Tiny images for hash and layout tests in the media pipeline:
 ```bash
 # Rebuild the Apple chat.db fixture (overwrites an existing sample_chat.db):
 python3 tests/fixtures/build_sample_chat_db.py
+
+# Rebuild the WhatsApp ChatStorage.sqlite fixture (overwrites sample_whatsapp.db):
+python3 tests/fixtures/build_sample_whatsapp_db.py
 
 # Rebuild media files (PNG/JPG/HEIC + WhatsApp photo/opus):
 python3 tests/fixtures/build_media_fixtures.py
