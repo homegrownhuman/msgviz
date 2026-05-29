@@ -24,9 +24,15 @@ import re
 import datetime
 import unicodedata
 from pathlib import Path
-from typing import Iterable, Iterator, Optional
+from typing import Callable, Iterable, Iterator, Optional
 
+from msgviz.core import drift
 from msgviz.core.canonical import CanonicalMessage, ChatSpec, Attachment
+from . import whatsapp_export_schema as wes
+
+
+def _ignore_drift(_event: drift.DriftEvent) -> None:
+    pass
 
 
 MSG_RE = re.compile(
@@ -86,13 +92,44 @@ class WhatsAppExportAdapter:
 
     def __init__(self, export_dir: str | Path, slug: str, title: str,
                  me_name: str, subtitle: Optional[str] = None,
-                 is_group: bool = False):
+                 is_group: bool = False,
+                 *, on_drift: Optional[Callable[[drift.DriftEvent], None]] = None):
         self.export_dir = Path(export_dir)
         self.slug = slug
         self.title = title
         self.subtitle = subtitle
         self.is_group = is_group
         self.me_name = me_name
+        self._on_drift = on_drift or _ignore_drift
+        #: most recent format probe; None until open()/iter_messages().
+        self.last_report: Optional[drift.SchemaReport] = None
+
+    def open(self) -> drift.SchemaReport:
+        """Sample the head of _chat.txt and run the export-format contract.
+
+        Returns the SchemaReport. Raises SchemaDriftError when the file
+        has date-prefixed header lines but none match a known WhatsApp
+        export format (a real export in a locale/region we can't parse —
+        proceeding would mis-attribute every line). Warn-level events
+        (unknown attachment-marker language) are forwarded to on_drift.
+        """
+        txt = self.export_dir / "_chat.txt"
+        sample: list[str] = []
+        if txt.is_file():
+            with open(txt, encoding="utf-8") as f:
+                for line_raw in f:
+                    line = _strip_invisible(line_raw.rstrip("\n"))
+                    if line:
+                        sample.append(line)
+                    if len(sample) >= 50:
+                        break
+        report = wes.probe_export_text(sample)
+        self.last_report = report
+        for event in report.events:
+            self._on_drift(event)
+        if report.is_fatal:
+            raise drift.SchemaDriftError(report)
+        return report
 
     def list_chats(self) -> Iterable[ChatSpec]:
         """One export folder = one chat."""
@@ -111,6 +148,10 @@ class WhatsAppExportAdapter:
         txt = self.export_dir / "_chat.txt"
         if not txt.is_file():
             return
+        # Run the format probe once before parsing; raises on fatal
+        # (unparseable format) so we don't silently mis-attribute lines.
+        if self.last_report is None:
+            self.open()
         # First gather raw records (date + sender + multi-line text).
         raw = []
         cur = None
