@@ -11,6 +11,7 @@ from . import (
     check_cmd,
     delete_cmd,
     device_cmd,
+    drift_cmd,
     import_cmd,
     init_cmd,
     ocr_cmd,
@@ -38,6 +39,9 @@ app.command(name="ocr", help="OCR on images (macOS Vision / Tesseract).")(ocr_cm
 app.command(name="check", help="Selftest — which features work on this machine.")(
     check_cmd.check
 )
+
+# Drift is a Typer sub-app (callback handles the bare `msgviz drift`).
+app.add_typer(drift_cmd.app, name="drift", help="View / acknowledge schema drift.")
 
 # Subcommand groups.
 app.add_typer(device_cmd.app, name="device", help="Manage devices.")

@@ -42,9 +42,21 @@ def ensure_avatar_column(con: sqlite3.Connection) -> bool:
     return True
 
 
+def ensure_drift_event(con: sqlite3.Connection) -> bool:
+    """Create the drift_event table + dedup index if missing.
+
+    Delegates to msgviz.core.drift so the DDL lives next to the code
+    that reads/writes it. Returns True if anything was created.
+    """
+    from msgviz.core.drift import ensure_drift_event_table
+    return ensure_drift_event_table(con)
+
+
 def apply_all(con: sqlite3.Connection) -> list[str]:
     """Run every known additive migration.  Returns the list of names applied."""
     applied: list[str] = []
     if ensure_avatar_column(con):
         applied.append("person.avatar_src")
+    if ensure_drift_event(con):
+        applied.append("drift_event")
     return applied
