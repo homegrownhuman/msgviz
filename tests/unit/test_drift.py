@@ -154,6 +154,51 @@ def test_probe_new_column_is_warn() -> None:
     assert e.observed == "TEXT"
 
 
+def test_flag_new_columns_false_suppresses_new_column_drift() -> None:
+    # A table that opts out of new_column flagging (e.g. a wide vendor
+    # table) must NOT report unexpected columns, but must STILL fatal on
+    # a missing required column.
+    src = _make_source(
+        "CREATE TABLE T (id INTEGER, a TEXT, b TEXT, c TEXT, d TEXT)"
+    )
+    contract = drift.SchemaContract(
+        source="wide",
+        version=1,
+        tables={
+            "T": drift.TableContract(
+                required_columns={"id": "INTEGER"},
+                optional_columns={"a"},
+                flag_new_columns=False,
+            ),
+        },
+    )
+    report = drift.probe_tables(src, contract)
+    # b/c/d are unlisted but must not be flagged.
+    assert [e for e in report.events if e.kind == "new_column"] == []
+    assert report.warn_count == 0
+    assert report.fatal_count == 0
+
+
+def test_flag_new_columns_false_still_fatals_on_missing_required() -> None:
+    src = _make_source("CREATE TABLE T (a TEXT, b TEXT)")  # no 'id'
+    contract = drift.SchemaContract(
+        source="wide",
+        version=1,
+        tables={
+            "T": drift.TableContract(
+                required_columns={"id": "INTEGER"},
+                flag_new_columns=False,
+            ),
+        },
+    )
+    report = drift.probe_tables(src, contract)
+    assert report.is_fatal
+    assert any(
+        e.kind == "missing_required_column" and e.column == "id"
+        for e in report.events
+    )
+
+
 def test_probe_type_change_on_required_column_is_fatal() -> None:
     # Required ZMESSAGEDATE was REAL; ship it as TEXT instead.
     src = _make_source(_wa_ddl(type_overrides={"ZMESSAGEDATE": "TEXT"}))

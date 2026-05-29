@@ -38,7 +38,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Iterable, Literal, Optional
+from typing import Callable, Literal, Optional
 
 log = logging.getLogger("msgviz.drift")
 
@@ -70,11 +70,22 @@ class TableContract:
             (``"INTEGER"``, ``"REAL"``, ``"TEXT"``, ``"BLOB"``,
             ``"NUMERIC"``). Missing or wrong-type → fatal.
         optional_columns: set of column names the adapter knows about
-            but does not require. Missing → warn. Present-but-unknown
-            additions to the table → warn (``new_column``).
+            but does not require. Missing → warn.
+        flag_new_columns: whether a column present in the live table
+            but absent from this contract should raise a ``new_column``
+            warn event. Default True — good for small, fully-enumerable
+            tables (e.g. WhatsApp's, where a genuinely new column is
+            worth noticing). Set False for large vendor tables we only
+            read a slice of (Apple's ``message`` has ~60 columns, of
+            which we read 14): there, an unlisted column is *normal*
+            and flagging every one just trains users to ignore the
+            banner (proposal §13.11). What matters on those tables is
+            *losing* a column we depend on — still caught via
+            required/optional — not Apple adding a new one.
     """
     required_columns: dict[str, str]
     optional_columns: set[str] = field(default_factory=set)
+    flag_new_columns: bool = True
 
 
 @dataclass(frozen=True)
@@ -324,24 +335,27 @@ def probe_tables(
                 ))
 
         # Columns we did NOT expect: new_column drift, warn level.
-        known = set(tc.required_columns) | tc.optional_columns
-        for col in live_cols:
-            if col not in known:
-                events.append(DriftEvent(
-                    source=contract.source,
-                    severity="warn",
-                    kind="new_column",
-                    table=table,
-                    column=col,
-                    observed=live_cols[col],
-                    expected=None,
-                    detail=(
-                        f"column {table}.{col} ({live_cols[col]}) appeared "
-                        f"in source DB but is not in our contract — "
-                        f"update {contract.source}'s schema file"
-                    ),
-                    seen_at=stamp,
-                ))
+        # Skipped entirely on tables that opt out (large vendor tables
+        # we only read a slice of — see TableContract.flag_new_columns).
+        if tc.flag_new_columns:
+            known = set(tc.required_columns) | tc.optional_columns
+            for col in live_cols:
+                if col not in known:
+                    events.append(DriftEvent(
+                        source=contract.source,
+                        severity="warn",
+                        kind="new_column",
+                        table=table,
+                        column=col,
+                        observed=live_cols[col],
+                        expected=None,
+                        detail=(
+                            f"column {table}.{col} ({live_cols[col]}) appeared "
+                            f"in source DB but is not in our contract — "
+                            f"update {contract.source}'s schema file"
+                        ),
+                        seen_at=stamp,
+                    ))
 
     return SchemaReport(
         schema_version=contract.version,
