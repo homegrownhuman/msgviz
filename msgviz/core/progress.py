@@ -46,6 +46,32 @@ from typing import Any, Iterator, Optional
 # Phase handles. Both reporter implementations return the same phase API so
 # caller code stays identical.
 # ---------------------------------------------------------------------------
+def _fmt_eta(seconds: float) -> str:
+    """Format an ETA duration the way a developer wants to read it on a
+    progress line. Examples:
+
+        12.3s   →  "12s"
+        67.0s   →  "1m 7s"
+        910.0s  →  "15m 10s"
+        4200.0s →  "1h 10m"
+        99999.0s →  "27h 46m"      (don't round to days — sub-day cases
+                                    are rare and "1d 3h" feels wrong on a
+                                    progress line)
+    """
+    if seconds < 0:
+        return "0s"
+    s = int(round(seconds))
+    if s < 60:
+        return f"{s}s"
+    if s < 3600:
+        m, s = divmod(s, 60)
+        return f"{m}m {s}s"
+    # Hours+ — drop seconds, they don't carry useful signal at this scale.
+    h, rem = divmod(s, 3600)
+    m = rem // 60
+    return f"{h}h {m}m"
+
+
 @dataclass
 class _PhaseState:
     title: str
@@ -175,7 +201,7 @@ class TerminalReporter(ProgressReporter):
         return root
 
     def _phase_label(self, st: _PhaseState) -> str:
-        # Status-Symbol + Titel + Counter/Dauer + letzte Note
+        # Status icon + title + counter/duration + (in-flight only) ETA + last note.
         if st.finished_at is not None:
             dur = st.finished_at - st.started_at
             cnt = ""
@@ -186,12 +212,24 @@ class TerminalReporter(ProgressReporter):
             line = f"[green]✓[/green] {st.title}{cnt} [dim]({dur:.1f}s)[/dim]"
         else:
             cnt = ""
+            eta_str = ""
             if st.total is not None and st.total > 0:
                 pct = (st.current / st.total) * 100
                 cnt = f" [{st.current}/{st.total} · {pct:.0f}%]"
+                # ETA: only meaningful once a few items have completed.
+                # Below the threshold the per-item rate is too noisy
+                # (first item often dominated by setup / model load).
+                if st.current >= 3:
+                    elapsed = time.time() - st.started_at
+                    if elapsed > 0:
+                        rate = st.current / elapsed       # items / second
+                        remaining_items = st.total - st.current
+                        if rate > 0 and remaining_items > 0:
+                            eta_seconds = remaining_items / rate
+                            eta_str = f" · ETA {_fmt_eta(eta_seconds)}"
             elif st.current:
                 cnt = f" [{st.current}]"
-            line = f"[cyan]●[/cyan] {st.title}{cnt}"
+            line = f"[cyan]●[/cyan] {st.title}{cnt}{eta_str}"
         if st.notes:
             line += f"  [dim]{st.notes[-1]}[/dim]"
         return line

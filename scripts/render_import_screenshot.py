@@ -186,6 +186,99 @@ def main() -> None:
     progress_module.TerminalReporter._ensure_live = _patched_ensure_live
     progress_module.TerminalReporter._refresh = _patched_refresh
 
+    # --- 3b. Stub workers.transcribe + workers.ocr_images -------------------
+    # Goal: get the Transcription and OCR phases into the rendered tree
+    # WITHOUT actually depending on whisper-cli, ffmpeg, OCR engines, or
+    # real audio/image files. The stubs talk to the reporter the way the
+    # real workers do (set_total + per-file tick + note), backdate the
+    # phase start so the ETA is non-trivial, and tick a partial fraction
+    # so the phases show up as in-flight (with ETA) in the final SVG.
+    import types as _types
+    import time as _time
+    import sys as _sys2
+
+    def _make_stub_run(total: int, completed: int, *,
+                       backdate_seconds: float,
+                       last_filename: str, last_text: str):
+        """Return a `run(chat=..., reporter_phase=...)` callable that
+        simulates a partial worker pass — set the total, advance to
+        `completed`, leave a representative note. The phase's
+        started_at is backdated by `backdate_seconds` so the ETA
+        formula produces a realistic remaining-time estimate."""
+        def run(chat=None, limit=None, reporter_phase=None, **kwargs):
+            if reporter_phase is None:
+                return
+            reporter_phase.set_total(total)
+            # Backdate started_at so the ETA calculation has a
+            # meaningful elapsed value. Without this, the recording is
+            # done in well under a second of wall-clock time and the
+            # ETA suffix never shows up (rate would be absurdly high).
+            reporter_phase._state.started_at = _time.time() - backdate_seconds
+            for _ in range(completed):
+                reporter_phase.tick()
+            reporter_phase.note(f"{last_filename}: {last_text}")
+        return run
+
+    workers_pkg = _types.ModuleType("workers")
+    workers_pkg.__path__ = []  # mark as a package
+    _sys2.modules["workers"] = workers_pkg
+
+    transcribe_stub = _types.ModuleType("workers.transcribe")
+    transcribe_stub.run = _make_stub_run(
+        total=142, completed=37,
+        backdate_seconds=320,  # 5m 20s elapsed → realistic Whisper rate
+        last_filename="bob_2024-03-15_voice_037.opus",
+        last_text="Hi, ich wollte fragen wegen morgen — ",
+    )
+    _sys2.modules["workers.transcribe"] = transcribe_stub
+
+    ocr_stub = _types.ModuleType("workers.ocr_images")
+    ocr_stub.run = _make_stub_run(
+        total=405, completed=12,
+        backdate_seconds=4,
+        last_filename="screenshot_2024-03-15.jpg",
+        last_text="Boarding pass · Gate B23 · 14:35",
+    )
+    _sys2.modules["workers.ocr_images"] = ocr_stub
+
+    # Disable the auto-finish for phases: leave Transcription and OCR
+    # in their in-flight state in the render so ETA + spinner show.
+    _orig_phase_done = progress_module.TerminalReporter._on_phase_done
+
+    def _patched_phase_done(self, state):
+        # Skip marking the phase finished for our two stubbed workers
+        # so the rendered tree still shows them as in-flight (with the
+        # spinner + ETA). The non-stubbed phases (Parse source, Prepare
+        # DB, Write messages + media) still complete cleanly.
+        if state.title in {"Transcription", "OCR images"}:
+            # Don't set finished_at — but DO call _refresh so any
+            # animation hook downstream still runs.
+            self._refresh()
+            return
+        # Original behaviour for everything else.
+        state.finished_at = state.finished_at  # already set by ProgressReporter._phase
+
+    progress_module.TerminalReporter._on_phase_done = _patched_phase_done
+
+    # Now: the base ProgressReporter._phase context manager sets
+    # state.finished_at on exit BEFORE calling _on_phase_done. So
+    # blocking _on_phase_done isn't enough — we need to also unset
+    # finished_at after the phase exits. Patch the close hook to
+    # clear it for our stubbed phases.
+    _orig_inner_phase = progress_module.ProgressReporter._phase
+
+    @progress_module.contextmanager
+    def _patched_phase(self, title, total, parent):
+        with _orig_inner_phase(self, title, total, parent) as handle:
+            yield handle
+        # After the original context manager exits, the state has
+        # finished_at set. For our stubbed phases, unset it so the
+        # render shows them as in-flight.
+        if title in {"Transcription", "OCR images"}:
+            handle._state.finished_at = None
+
+    progress_module.ProgressReporter._phase = _patched_phase
+
     # --- 4. Run the real importer (partial, via --limit) --------------------
     # Print a few intro lines to the recording console so the screenshot
     # also shows the invocation, matching what a real user would see.

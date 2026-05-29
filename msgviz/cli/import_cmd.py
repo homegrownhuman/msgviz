@@ -29,9 +29,23 @@ def whatsapp(
     ),
     limit: int = typer.Option(None, "--limit", help="Import only the first N messages."),
     no_media: bool = typer.Option(False, "--no-media", help="Skip media (images/audio)."),
+    no_transcribe: bool = typer.Option(
+        False, "--no-transcribe",
+        help="Skip Whisper transcription of voice notes after the import."
+    ),
+    no_ocr: bool = typer.Option(
+        False, "--no-ocr",
+        help="Skip OCR of images after the import."
+    ),
     progress: bool = typer.Option(True, "--progress/--no-progress", help="Show the Rich progress tree."),
 ) -> None:
-    """Import a WhatsApp export."""
+    """Import a WhatsApp export.
+
+    By default the command runs three phases — parse + DB write + media,
+    then transcribes any voice notes via whisper-cli, then OCRs any
+    images. Pass --no-transcribe / --no-ocr to skip the heavier post
+    passes (useful for fast test imports with --limit).
+    """
     # tools/ isn't installed by pip — locate it relative to the msgviz
     # package (msgviz/cli/import_cmd.py -> ../../tools/) so it's
     # importable regardless of CWD and regardless of MSGVIZ_HOME.
@@ -40,7 +54,9 @@ def whatsapp(
     _repo_root = _Path(__file__).resolve().parent.parent.parent
     if (_repo_root / "tools").is_dir() and str(_repo_root) not in _sys.path:
         _sys.path.insert(0, str(_repo_root))
-    from tools.import_whatsapp_export import import_export  # existing worker
+    from tools.import_whatsapp_export import (
+        import_export, transcribe_chat, ocr_chat,
+    )
 
     from msgviz.core.progress import make_reporter
 
@@ -55,10 +71,19 @@ def whatsapp(
             with_media=not no_media,
             reporter=reporter,
         )
+        # Post-passes: only meaningful when media was actually imported.
+        # We honour the same opt-out flags the legacy __main__ block has.
+        if not no_media:
+            if not no_transcribe:
+                transcribe_chat(result_slug, reporter=reporter)
+            if not no_ocr:
+                ocr_chat(result_slug, reporter=reporter)
     except SystemExit as e:
         die(f"Import aborted: {e}")
     except Exception as e:
         die(f"Import failed: {e}")
+    finally:
+        reporter.close()
     console.print(f"[green]Import OK:[/green] {result_slug}")
 
 
