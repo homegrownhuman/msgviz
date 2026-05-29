@@ -156,6 +156,9 @@ def build() -> Path:
 
         # --- 1:1 messages (session 1) ----------------------------------------
         # (pk, offset_s, is_me, type, text, stanza, from_jid)
+        # Note the @lid split: the SAME partner (Alice) sends under a
+        # phone JID on older messages and a @lid on newer ones. Both must
+        # collapse to the one partner (ZPARTNERNAME='Alice').
         one_to_one = [
             (100, 0,    0, 0, "Hey! WhatsApp from Alice", "STANZA-100",
              "491700000001@s.whatsapp.net"),
@@ -163,6 +166,8 @@ def build() -> Path:
             (102, 3600, 0, 1, None,                       "STANZA-102",
              "491700000001@s.whatsapp.net"),  # image, no text
             (103, 3660, 1, 3, None,                       "STANZA-103", None),  # voice note from me
+            (104, 7200, 0, 0, "(same Alice, new @lid id)", "STANZA-104",
+             "89262422757561@lid"),  # @lid split — still Alice
         ]
         for pk, off, is_me, mtype, text, stanza, from_jid in one_to_one:
             core = BASE_CORE + off

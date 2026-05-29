@@ -117,6 +117,8 @@ def test_one_to_one_timestamps_are_unix(con) -> None:
 # ---------------------------------------------------------------------------
 
 def test_one_to_one_senders_and_is_me(con) -> None:
+    # Without a partner_name, the low-level reader falls back to the
+    # message JID for non-me senders.
     msgs = list(wadb.iter_canonical(con, 1, "Me", is_group=False))
     by_id = {m.external_id: m for m in msgs}
     assert by_id["STANZA-100"].is_me is False
@@ -125,10 +127,26 @@ def test_one_to_one_senders_and_is_me(con) -> None:
     assert by_id["STANZA-101"].sender_raw == "Me"
 
 
+def test_one_to_one_partner_name_collapses_lid_split(con) -> None:
+    # With a partner_name, EVERY non-me message — phone-JID and @lid
+    # alike — is attributed to the one partner. This is the @lid-split
+    # fix: a 1:1 chat must surface one person, not two raw IDs.
+    msgs = list(wadb.iter_canonical(
+        con, 1, "Me", is_group=False, partner_name="Alice"
+    ))
+    non_me = {m.sender_raw for m in msgs if not m.is_me}
+    assert non_me == {"Alice"}
+    # STANZA-104 comes from a @lid but is still Alice.
+    by_id = {m.external_id: m for m in msgs}
+    assert by_id["STANZA-104"].sender_raw == "Alice"
+
+
 def test_one_to_one_external_id_is_stanza(con) -> None:
     msgs = list(wadb.iter_canonical(con, 1, "Me", is_group=False))
     ids = {m.external_id for m in msgs}
-    assert ids == {"STANZA-100", "STANZA-101", "STANZA-102", "STANZA-103"}
+    assert ids == {
+        "STANZA-100", "STANZA-101", "STANZA-102", "STANZA-103", "STANZA-104",
+    }
 
 
 def test_image_message_has_attachment(con) -> None:

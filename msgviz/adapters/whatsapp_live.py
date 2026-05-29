@@ -81,6 +81,10 @@ class WhatsAppLiveAdapter:
         self.last_report: Optional[drift.SchemaReport] = None
         #: is_group flag per chat source_id, cached from list_chats().
         self._is_group: dict[str, bool] = {}
+        #: raw ZPARTNERNAME per 1:1 chat source_id (None if unnamed),
+        #: cached from list_chats() so iter_messages can attribute every
+        #: non-me message to the one partner.
+        self._partner_name: dict[str, Optional[str]] = {}
 
     # -- lifecycle ----------------------------------------------------------
     def _open(self) -> sqlite3.Connection:
@@ -134,6 +138,13 @@ class WhatsAppLiveAdapter:
             is_group = session_type == ws.SESSION_TYPE_GROUP
             self._is_group[str(pk)] = is_group
             jid = c["contact_jid"] or ""
+            partner = (c["partner_name"] or "").strip() or None
+            # Only cache a *real* name for 1:1 sender attribution; a
+            # bare JID partner stays None so we fall back to the message
+            # JID rather than relabelling with the chat's own JID.
+            self._partner_name[str(pk)] = (
+                None if is_group or (partner and "@" in partner) else partner
+            )
             title = c["partner_name"] or jid or f"chat_{pk}"
             yield ChatSpec(
                 slug=f"{self.device_slug}/chat_{pk}",
@@ -149,9 +160,14 @@ class WhatsAppLiveAdapter:
         chat_pk = int(chat.source_id)
         # Prefer the ChatSpec's flag; fall back to the cached lookup.
         is_group = chat.is_group or self._is_group.get(chat.source_id, False)
+        # Ensure the per-chat caches are populated (list_chats fills them).
+        if chat.source_id not in self._partner_name:
+            list(self.list_chats())
+        partner_name = None if is_group else self._partner_name.get(chat.source_id)
         yield from wadb.iter_canonical(
             con, chat_pk, self.me_name,
             is_group=is_group,
+            partner_name=partner_name,
             on_drift=self._on_drift,
         )
 

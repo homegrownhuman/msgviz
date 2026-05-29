@@ -172,6 +172,7 @@ def _build_canonical(
     me_name: str,
     is_group: bool,
     member_jids: dict[int, str],
+    partner_name: Optional[str],
     on_drift: Callable[[drift.DriftEvent], None],
 ) -> Optional[CanonicalMessage]:
     """Translate one ZWAMESSAGE row into a CanonicalMessage.
@@ -231,7 +232,13 @@ def _build_canonical(
         # Fall back to ZFROMJID if the member row is missing.
         sender_raw = sender_raw or (row["from_jid"] or "")
     else:
-        sender_raw = row["from_jid"] or ""
+        # 1:1 chat: every non-me message is from the one chat partner.
+        # WhatsApp may carry the partner under a phone-JID on older
+        # messages and a @lid on newer ones (the @lid split, §5.2) —
+        # using the chat's partner name collapses both into ONE person
+        # and gives a human label instead of a raw JID. Fall back to the
+        # message JID only when the chat has no usable partner name.
+        sender_raw = partner_name or (row["from_jid"] or "")
 
     text = _clean_text(row["text"])
 
@@ -334,6 +341,7 @@ def iter_canonical(
     me_name: str,
     *,
     is_group: bool,
+    partner_name: Optional[str] = None,
     on_drift: Optional[Callable[[drift.DriftEvent], None]] = None,
 ) -> Iterator[CanonicalMessage]:
     """Read one chat session and yield CanonicalMessage objects.
@@ -348,6 +356,11 @@ def iter_canonical(
         me_name: display marker written into sender_raw for is_me rows.
         is_group: whether this session is a group (drives sender
             resolution via ZWAGROUPMEMBER).
+        partner_name: for a 1:1 chat, the chat partner's display name
+            (ZWACHATSESSION.ZPARTNERNAME). Every non-me message in a 1:1
+            is attributed to this single person, collapsing the
+            phone-JID / @lid split (§5.2) and giving a human label
+            instead of a raw JID. Ignored for groups.
         on_drift: sink for drift events; defaults to a no-op. The
             adapter passes ``lambda e: record_event(mv_con, e)``.
     """
@@ -361,6 +374,7 @@ def iter_canonical(
                 me_name=me_name,
                 is_group=is_group,
                 member_jids=member_jids,
+                partner_name=partner_name,
                 on_drift=sink,
             ),
             row,

@@ -138,9 +138,21 @@ def test_list_chats_runs_probe_if_not_opened(adapter) -> None:
 def test_iter_messages_one_to_one(adapter) -> None:
     chats = {c.source_id: c for c in adapter.list_chats()}
     msgs = list(adapter.iter_messages(chats["1"]))
-    assert len(msgs) == 4
+    assert len(msgs) == 5
     ids = {m.external_id for m in msgs}
-    assert ids == {"STANZA-100", "STANZA-101", "STANZA-102", "STANZA-103"}
+    assert ids == {
+        "STANZA-100", "STANZA-101", "STANZA-102", "STANZA-103", "STANZA-104",
+    }
+
+
+def test_iter_messages_one_to_one_collapses_to_partner(adapter) -> None:
+    # The adapter attributes every non-me 1:1 message to the chat
+    # partner (ZPARTNERNAME='Alice'), collapsing the phone-JID/@lid split
+    # — one person, not two raw IDs.
+    chats = {c.source_id: c for c in adapter.list_chats()}
+    msgs = list(adapter.iter_messages(chats["1"]))
+    non_me = {m.sender_raw for m in msgs if not m.is_me}
+    assert non_me == {"Alice"}
 
 
 def test_iter_messages_group_resolves_senders(adapter) -> None:

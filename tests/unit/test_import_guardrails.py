@@ -226,7 +226,7 @@ def test_import_offers_device_creation(tmp_path, monkeypatch) -> None:
     assert con.execute(
         "SELECT COUNT(*) FROM device WHERE slug='new_wa'"
     ).fetchone()[0] == 1
-    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 4
+    assert con.execute("SELECT COUNT(*) FROM message").fetchone()[0] == 5
     con.close()
 
 
@@ -279,7 +279,7 @@ def test_all_chats_yes_imports(home) -> None:
     ])
     assert res.exit_code == 0
     assert "Imported:" in res.stdout
-    assert _msg_count(home) == 8
+    assert _msg_count(home) == 9       # Alice 5 + Dev Team 4
 
 
 def test_chat_filter_imports_only_match(home) -> None:
@@ -288,8 +288,26 @@ def test_chat_filter_imports_only_match(home) -> None:
         "--yes", "--no-media", "--no-progress", "--db", str(WA_DB),
     ])
     assert res.exit_code == 0
-    # Only the 1:1 with Alice (4 messages), not the group.
-    assert _msg_count(home) == 4
+    # Only the 1:1 with Alice (5 messages), not the group.
+    assert _msg_count(home) == 5
+
+
+def test_one_to_one_creates_single_named_person(home) -> None:
+    # The @lid-split fix: importing the Alice 1:1 must create ONE person
+    # named "Alice", not two raw IDs (phone-JID + @lid).
+    res = runner.invoke(app, [
+        "import", "whatsapp-live", "--device", "mac_wa", "--chat", "Alice",
+        "--yes", "--no-media", "--no-progress", "--db", str(WA_DB),
+    ])
+    assert res.exit_code == 0
+    from msgviz.paths import db_file
+    con = sqlite3.connect(db_file())
+    # Exactly one non-"Me" person, and it's named "Alice".
+    names = [r[0] for r in con.execute(
+        "SELECT display_name FROM person WHERE display_name != 'Me'"
+    )]
+    con.close()
+    assert names == ["Alice"]
 
 
 def test_confirmation_abort_writes_nothing(home) -> None:
@@ -309,24 +327,24 @@ def test_preview_live_detects_new_persons(home) -> None:
     from tools.import_whatsapp_live import preview_live
     plan = preview_live(device_slug="mac_wa", db_path=str(WA_DB), me_name="Me")
     assert len(plan["chats"]) == 2
-    # All three non-me senders are new (fresh DB).
+    # 3 new senders: the 1:1 partner "Alice" (named) + the two group
+    # member JIDs (group sender→name resolution is a separate concern).
+    assert "Alice" in plan["new_persons"]
     assert len(plan["new_persons"]) == 3
-    assert all("@" in n for n in plan["new_persons"])
 
 
 def test_preview_live_matches_existing_person(home) -> None:
-    # Pre-create a person whose display_name equals one sender JID; the
-    # preview must then NOT list that JID as new.
+    # Pre-create the 1:1 partner "Alice"; the preview must then NOT list
+    # Alice as new (the @lid-split collapse means the 1:1 resolves to
+    # the partner name, which now matches an existing person).
     from msgviz.paths import db_file
     con = sqlite3.connect(db_file())
-    con.execute(
-        "INSERT INTO person(display_name) VALUES('491700000001@s.whatsapp.net')"
-    )
+    con.execute("INSERT INTO person(display_name) VALUES('Alice')")
     con.commit()
     con.close()
     from tools.import_whatsapp_live import preview_live
     plan = preview_live(device_slug="mac_wa", db_path=str(WA_DB), me_name="Me")
-    assert "491700000001@s.whatsapp.net" not in plan["new_persons"]
+    assert "Alice" not in plan["new_persons"]
     assert len(plan["new_persons"]) == 2
 
 
