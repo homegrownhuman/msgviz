@@ -17,7 +17,7 @@ def _ensure_device(slug: str) -> None:
     Cuts the setup friction: instead of failing with "device not found"
     and forcing a separate `msgviz device add`, we ask. Declined → exit.
     """
-    from ._helpers import open_db
+    from ._helpers import existing_device_slugs, open_db
     with open_db(readonly=True) as con:
         row = con.execute(
             "SELECT 1 FROM device WHERE slug = ?", (slug,)
@@ -26,6 +26,11 @@ def _ensure_device(slug: str) -> None:
         return
 
     console.print(f"[yellow]Device '{slug}' does not exist yet.[/yellow]")
+    others = [s for s in existing_device_slugs() if s != slug]
+    if others:
+        # Surface existing devices so a typo is obvious before the user
+        # creates a near-duplicate.
+        console.print(f"[dim]Existing devices: {', '.join(others)}[/dim]")
     confirm_or_abort(f"Create device '{slug}' now?", default=True)
     name = typer.prompt("Display name for this device", default=slug)
     owner = typer.prompt("Your name (the 'me' in these chats)", default="Me")

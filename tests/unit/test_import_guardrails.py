@@ -101,6 +101,55 @@ def test_whatsapp_chats_default_min_is_10(tmp_path, monkeypatch) -> None:
     assert "below the threshold" in res.stdout
 
 
+def test_whatsapp_chats_footer_no_devices(tmp_path, monkeypatch) -> None:
+    # No archive at all → footer falls back to <slug> + the create hint.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    res = runner.invoke(app, ["whatsapp", "chats", "-m", "0", "--db", str(WA_DB)])
+    assert res.exit_code == 0
+    assert "--device <slug>" in res.stdout
+    assert "No devices yet" in res.stdout
+
+
+def test_whatsapp_chats_footer_lists_real_devices(tmp_path, monkeypatch) -> None:
+    # An archive with devices → footer uses a real slug + lists them.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    from msgviz.paths import db_file, schema_sql, data_dir
+    data_dir().mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(db_file())
+    con.executescript(Path(schema_sql()).read_text())
+    pid = con.execute("INSERT INTO person(display_name) VALUES('Me')").lastrowid
+    for slug in ("ipad_levi", "mac_wa"):
+        con.execute(
+            "INSERT INTO device(slug,name,type,owner_person_id) "
+            "VALUES(?,?,'mac_live',?)", (slug, slug, pid))
+    con.commit()
+    con.close()
+    res = runner.invoke(app, ["whatsapp", "chats", "-m", "0", "--db", str(WA_DB)])
+    assert res.exit_code == 0
+    assert "--device <slug>" not in res.stdout      # real slug used
+    assert "Your devices: ipad_levi, mac_wa" in res.stdout
+
+
+def test_import_typo_device_shows_existing(tmp_path, monkeypatch) -> None:
+    # A mistyped --device surfaces existing devices before creating one.
+    monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
+    from msgviz.paths import db_file, schema_sql, data_dir
+    data_dir().mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(db_file())
+    con.executescript(Path(schema_sql()).read_text())
+    pid = con.execute("INSERT INTO person(display_name) VALUES('Me')").lastrowid
+    con.execute(
+        "INSERT INTO device(slug,name,type,owner_person_id) "
+        "VALUES('mac_wa','Mac WA','mac_live',?)", (pid,))
+    con.commit()
+    con.close()
+    res = runner.invoke(app, [
+        "import", "whatsapp-live", "--device", "mac_w",  # typo
+        "--chat", "Alice", "--no-media", "--no-progress", "--db", str(WA_DB),
+    ], input="n\n")  # decline creation
+    assert "Existing devices: mac_wa" in res.stdout
+
+
 def test_whatsapp_chats_filter(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("MSGVIZ_HOME", str(tmp_path))
     res = runner.invoke(app, [

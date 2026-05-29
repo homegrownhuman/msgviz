@@ -12,7 +12,6 @@ Not a public API — internal to msgviz.cli.
 from __future__ import annotations
 
 import sqlite3
-import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -94,3 +93,25 @@ def confirm_or_abort(prompt: str, default: bool = False) -> None:
     if not typer.confirm(prompt, default=default):
         console.print("[yellow]Aborted.[/yellow]")
         raise typer.Exit(code=1)
+
+
+def existing_device_slugs() -> list[str]:
+    """Slugs of devices in the archive, or [] if the DB doesn't exist yet.
+
+    Read-only and failure-tolerant: used by discovery commands (which
+    must work before any archive is set up) to show real `--device`
+    values in their hints instead of an abstract `<slug>` placeholder.
+    """
+    path = get_db_path()
+    if not path.is_file():
+        return []
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        try:
+            return [r[0] for r in con.execute(
+                "SELECT slug FROM device ORDER BY slug"
+            )]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []

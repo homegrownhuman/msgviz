@@ -86,10 +86,29 @@ def chats(
             f"  [cyan]{c['title']}[/cyan] [dim]({kind})[/dim] — "
             f"{c['total']} messages"
         )
-    console.print(
-        "\nImport with [bold]msgviz import whatsapp-live --device <slug> "
-        "--chat \"<name>\"[/bold] (or [bold]--all-chats[/bold])."
-    )
+    from ._helpers import existing_device_slugs
+    devices = existing_device_slugs()
+    if devices:
+        dev = devices[0]
+        console.print(
+            f"\nImport with [bold]msgviz import whatsapp-live "
+            f"--device {dev} --chat \"<name>\"[/bold] "
+            f"(or [bold]--all-chats[/bold])."
+        )
+        if len(devices) > 1:
+            console.print(
+                f"[dim]Your devices: {', '.join(devices)}[/dim]"
+            )
+    else:
+        console.print(
+            "\nImport with [bold]msgviz import whatsapp-live "
+            "--device <slug> --chat \"<name>\"[/bold] "
+            "(or [bold]--all-chats[/bold])."
+        )
+        console.print(
+            "[dim]No devices yet — pick any slug (e.g. "
+            "[bold]my_wa[/bold]); import will offer to create it.[/dim]"
+        )
     if result["drift_warn"]:
         console.print(
             f"[yellow]⚠ {result['drift_warn']} schema-drift warning(s)[/yellow] "
