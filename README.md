@@ -86,28 +86,12 @@ group chats, and reverse-proxy setup, see
 Click into any chat for the timeline, the heatmap, the media overview,
 or the voice-notes browser (click a thumbnail for the full view):
 
-<table border="0" cellspacing="0" cellpadding="0">
-  <tr style="border:none">
-    <td width="33%" style="border:none" valign="top">
-      <a href="docs/screenshots/page-chat.png">
-        <img src="docs/screenshots/page-chat.png" alt="Chat page with messages, voice notes, and side heatmap">
-      </a>
-      <p align="center"><sub>Chat + heatmap</sub></p>
-    </td>
-    <td width="33%" style="border:none" valign="top">
-      <a href="docs/screenshots/page-media.png">
-        <img src="docs/screenshots/page-media.png" alt="Media overview grid with photo thumbnails">
-      </a>
-      <p align="center"><sub>Media overview</sub></p>
-    </td>
-    <td width="33%" style="border:none" valign="top">
-      <a href="docs/screenshots/page-voice.png">
-        <img src="docs/screenshots/page-voice.png" alt="Voice notes browser with inline playback">
-      </a>
-      <p align="center"><sub>Voice notes</sub></p>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <a href="docs/screenshots/page-chat.png"><img src="docs/screenshots/page-chat.png" width="32%" alt="Chat page with messages, voice notes, and side heatmap"></a>
+  <a href="docs/screenshots/page-media.png"><img src="docs/screenshots/page-media.png" width="32%" alt="Media overview grid with photo thumbnails"></a>
+  <a href="docs/screenshots/page-voice.png"><img src="docs/screenshots/page-voice.png" width="32%" alt="Voice notes browser with inline playback"></a>
+</p>
+<p align="center"><sub>Chat + heatmap &nbsp;·&nbsp; Media overview &nbsp;·&nbsp; Voice notes</sub></p>
 
 Your real archive under `data/` is not touched — see
 [*The Three-Environment Model*](docs/GETTING_STARTED.md#2-the-three-environment-model).
